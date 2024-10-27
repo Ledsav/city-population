@@ -1,24 +1,25 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { CityMap } from "./components/CityMap/CityMap";
+import type { CityWithPerceptions } from "./types";
+import "./App.css";
 
 function App() {
+  const handleCitySelect = (city: CityWithPerceptions) => {
+    console.log("Selected city:", city);
+  };
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
+      <header className="app-header">
+        <h1 className="app-title">City Population Perception Map</h1>
+        <p className="app-description">
+          Explore how people perceive city populations around the world and
+          compare their estimates with actual numbers.
         </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
       </header>
+
+      <main className="app-content">
+        <CityMap onCitySelect={handleCitySelect} />
+      </main>
     </div>
   );
 }
