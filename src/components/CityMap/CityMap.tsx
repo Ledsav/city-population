@@ -1,4 +1,3 @@
-// src/components/CityMap/CityMap.tsx
 import React, { useState } from "react";
 import {
   ComposableMap,
@@ -6,92 +5,125 @@ import {
   Geography,
   ZoomableGroup,
 } from "react-simple-maps";
-import type { CityWithPerceptions } from "@/types/cityWithPerceptions";
+import type { CityWithPerceptions } from "@/types";
 import { CityMarker, CityTooltip } from "./components";
-import { sampleCities } from "./data";
 import "./CityMap.css";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-type CityMapProps = {
-  cities?: CityWithPerceptions[];
+interface CityMapProps {
+  cities: CityWithPerceptions[];
   onCitySelect?: (city: CityWithPerceptions) => void;
-};
+}
 
-export const CityMap: React.FC<CityMapProps> = ({
-  cities = sampleCities,
-  onCitySelect,
-}) => {
+export const CityMap: React.FC<CityMapProps> = ({ cities, onCitySelect }) => {
   const [tooltipContent, setTooltipContent] = useState("");
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [error, setError] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+
+  const getMarkerColor = (city: CityWithPerceptions) => {
+    const percentageOff =
+      (city.perceptions.perceptionGap / city.officialPopulation) * 100;
+
+    // Red for overestimated, blue for underestimated
+    if (percentageOff > 0) {
+      return percentageOff > 50 ? "#dc2626" : "#ef4444";
+    } else {
+      return percentageOff < -50 ? "#2563eb" : "#3b82f6";
+    }
+  };
+
+  const getMarkerSize = (city: CityWithPerceptions) => {
+    // Normalize population to millions for easier calculation
+    const populationInMillions = city.officialPopulation / 1_000_000;
+    // Use cube root for more distinct but not extreme differences
+    const baseSize = Math.cbrt(populationInMillions) * 5;
+    return selectedCity === city.id ? baseSize * 1.2 : baseSize;
+  };
 
   const handleCityMouseEnter =
     (city: CityWithPerceptions) => (event: React.MouseEvent) => {
-      const rect = (event.target as Element)
-        .closest(".map-container")
-        ?.getBoundingClientRect();
+      const mapContainer = (event.target as Element).closest(".map-container");
+      if (!mapContainer) return;
 
-      if (rect) {
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+      const mapRect = mapContainer.getBoundingClientRect();
+      const markerElement = (event.target as Element).closest(".city-marker");
+      if (!markerElement) return;
 
-        const tooltipText = `${city.name}, ${city.country}
-        Official: ${city.officialPopulation.toLocaleString()}
-        Perceived: ${city.perceptions.averagePerceivedPopulation.toLocaleString()}
-        Gap: ${Math.abs(city.perceptions.perceptionGap).toLocaleString()}
-        ${
-          city.perceptions.perceptionGap > 0
-            ? "Over-estimated"
-            : "Under-estimated"
-        }`;
+      const markerRect = markerElement.getBoundingClientRect();
 
-        setTooltipContent(tooltipText);
-        setTooltipPosition({ x, y });
+      // Calculate position relative to the window
+      const x = markerRect.left + markerRect.width / 2;
+      const y = markerRect.top;
+
+      const percentageOff = (
+        (city.perceptions.perceptionGap / city.officialPopulation) *
+        100
+      ).toFixed(1);
+      const totalResponses = city.perceptions.totalPerceptions;
+
+      setTooltipPosition({ x, y });
+      setTooltipContent(`
+      ${city.name}, ${city.country}
+      Official: ${city.officialPopulation.toLocaleString()}
+      Perceived: ${city.perceptions.averagePerceivedPopulation.toLocaleString()}
+      Difference: ${Math.abs(
+        city.perceptions.perceptionGap
+      ).toLocaleString()} (${percentageOff}%)
+      ${
+        city.perceptions.perceptionGap > 0
+          ? "Over-estimated"
+          : "Under-estimated"
       }
+      Based on ${totalResponses} ${
+        totalResponses === 1 ? "response" : "responses"
+      }
+    `);
     };
 
-  const handleMapError = () => {
-    setError(true);
+  const handleCityClick = (city: CityWithPerceptions) => {
+    setSelectedCity(selectedCity === city.id ? null : city.id);
+    onCitySelect?.(city);
   };
 
-  const mapConfig = {
-    width: 800,
-    height: 400,
-    scale: 130,
-    center: [0, 20] as [number, number],
-    translateExtent: [
-      [-10, -50],
-      [810, 450],
-    ] as [[number, number], [number, number]],
+  const getPerceptionStats = () => {
+    let mostOverestimated = cities[0];
+    let mostUnderestimated = cities[0];
+    let totalPerceptions = 0;
+
+    cities.forEach((city) => {
+      const percentageOff =
+        (city.perceptions.perceptionGap / city.officialPopulation) * 100;
+      const currentMostOver =
+        (mostOverestimated.perceptions.perceptionGap /
+          mostOverestimated.officialPopulation) *
+        100;
+      const currentMostUnder =
+        (mostUnderestimated.perceptions.perceptionGap /
+          mostUnderestimated.officialPopulation) *
+        100;
+
+      if (percentageOff > currentMostOver) mostOverestimated = city;
+      if (percentageOff < currentMostUnder) mostUnderestimated = city;
+      totalPerceptions += city.perceptions.totalPerceptions;
+    });
+
+    return { mostOverestimated, mostUnderestimated, totalPerceptions };
   };
+
+  const stats = getPerceptionStats();
 
   return (
     <div className="map-wrapper">
-      {error && (
-        <div className="map-error" role="alert">
-          Failed to load the map. Please try refreshing the page.
-        </div>
-      )}
-
       <div className="map-container">
         <ComposableMap
-          width={mapConfig.width}
-          height={mapConfig.height}
           projection="geoMercator"
           projectionConfig={{
-            scale: mapConfig.scale,
-            center: mapConfig.center,
+            scale: 130,
           }}
         >
-          <ZoomableGroup
-            zoom={1}
-            minZoom={1}
-            maxZoom={4}
-            center={mapConfig.center}
-            translateExtent={mapConfig.translateExtent}
-          >
-            <Geographies geography={geoUrl} onError={handleMapError}>
+          <ZoomableGroup center={[0, 0]} zoom={1}>
+            <Geographies geography={geoUrl}>
               {({ geographies }) =>
                 geographies.map((geo) => (
                   <Geography
@@ -100,47 +132,116 @@ export const CityMap: React.FC<CityMapProps> = ({
                     fill="#E2E8F0"
                     stroke="#CBD5E1"
                     strokeWidth={0.5}
-                    style={{
-                      default: {
-                        outline: "none",
-                        transition: "all 250ms",
-                      },
-                      hover: {
-                        fill: "#CBD5E1",
-                        outline: "none",
-                      },
-                      pressed: {
-                        outline: "none",
-                      },
-                    }}
+                    className="geography"
                   />
                 ))
               }
             </Geographies>
 
-            {!error &&
-              cities.map((city) => (
-                <CityMarker
-                  key={city.id}
-                  city={city}
-                  onMouseEnter={handleCityMouseEnter(city)}
-                  onMouseLeave={() => setTooltipContent("")}
-                  onClick={() => onCitySelect?.(city)}
-                />
-              ))}
+            {cities.map((city) => (
+              <CityMarker
+                key={city.id}
+                city={city}
+                color={getMarkerColor(city)}
+                size={getMarkerSize(city)}
+                selected={selectedCity === city.id}
+                onMouseEnter={handleCityMouseEnter(city)}
+                onMouseLeave={() => setTooltipContent("")}
+                onClick={() => handleCityClick(city)}
+              />
+            ))}
           </ZoomableGroup>
         </ComposableMap>
 
         <CityTooltip content={tooltipContent} position={tooltipPosition} />
       </div>
 
-      <div className="map-legend">
-        <h2 className="legend-title">Population Perception Map</h2>
-        <div className="legend-item">
-          <div className="legend-marker"></div>
-          <span className="legend-text">
-            City markers (size indicates population)
-          </span>
+      <div className="stats-panel">
+        <h2 className="stats-title">Population Perception Analysis</h2>
+
+        <div className="stats-grid">
+          {/* Legend Section */}
+          <div className="stats-section">
+            <h3 className="stats-section-title">Legend</h3>
+            <div className="legend-items">
+              <div className="legend-item">
+                <div
+                  className="legend-marker"
+                  style={{ backgroundColor: "#dc2626" }}
+                ></div>
+                <span className="legend-text">
+                  Highly overestimated ({">"}50%)
+                </span>
+              </div>
+              <div className="legend-item">
+                <div
+                  className="legend-marker"
+                  style={{ backgroundColor: "#ef4444" }}
+                ></div>
+                <span className="legend-text">
+                  Slightly overestimated (0-50%)
+                </span>
+              </div>
+              <div className="legend-item">
+                <div
+                  className="legend-marker"
+                  style={{ backgroundColor: "#3b82f6" }}
+                ></div>
+                <span className="legend-text">
+                  Slightly underestimated (0-50%)
+                </span>
+              </div>
+              <div className="legend-item">
+                <div
+                  className="legend-marker"
+                  style={{ backgroundColor: "#2563eb" }}
+                ></div>
+                <span className="legend-text">
+                  Highly underestimated ({">"}50%)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Insights Section */}
+          <div className="stats-section">
+            <h3 className="stats-section-title">Key Insights</h3>
+            <div className="insight-items">
+              <div className="insight-item">
+                <p className="insight-label">Most Overestimated</p>
+                <p className="insight-value">{stats.mostOverestimated.name}</p>
+                <p className="insight-stat positive">
+                  +
+                  {(
+                    (stats.mostOverestimated.perceptions.perceptionGap /
+                      stats.mostOverestimated.officialPopulation) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </p>
+              </div>
+
+              <div className="insight-item">
+                <p className="insight-label">Most Underestimated</p>
+                <p className="insight-value">{stats.mostUnderestimated.name}</p>
+                <p className="insight-stat negative">
+                  {(
+                    (stats.mostUnderestimated.perceptions.perceptionGap /
+                      stats.mostUnderestimated.officialPopulation) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </p>
+              </div>
+
+              <div className="insight-item">
+                <p className="insight-label">Total Perceptions Collected</p>
+                <p className="insight-value">
+                  {stats.totalPerceptions.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

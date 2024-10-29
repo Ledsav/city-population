@@ -4,49 +4,52 @@ import type { CityWithPerceptions } from "@/types";
 
 type CityMarkerProps = {
   city: CityWithPerceptions;
+  color: string;
+  size: number;
+  selected: boolean;
   onMouseEnter: (event: React.MouseEvent) => void;
   onMouseLeave: () => void;
-  onClick?: () => void;
+  onClick: () => void;
 };
 
 export const CityMarker: React.FC<CityMarkerProps> = ({
   city,
+  color,
+  size,
+  selected,
   onMouseEnter,
   onMouseLeave,
   onClick,
 }) => {
-  const getMarkerSize = (population: number) => {
-    return Math.max((Math.log(population) / Math.log(10)) * 2, 5);
-  };
-
   return (
     <Marker
       coordinates={[city.coordinates.longitude, city.coordinates.latitude]}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      onClick={onClick}
     >
-      <circle
-        r={getMarkerSize(city.officialPopulation)}
-        fill="#EF4444"
-        stroke="#FFFFFF"
-        strokeWidth={2}
-        opacity={0.8}
-        style={{
-          cursor: "pointer",
-          transition: "all 200ms",
-        }}
-        onMouseEnter={(e) => {
-          const target = e.target as SVGCircleElement;
-          target.style.opacity = "1";
-          target.style.transform = "scale(1.1)";
-        }}
-        onMouseLeave={(e) => {
-          const target = e.target as SVGCircleElement;
-          target.style.opacity = "0.8";
-          target.style.transform = "scale(1)";
-        }}
-      />
+      <g
+        className={`city-marker ${selected ? "selected" : ""}`}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onClick={onClick}
+      >
+        {/* Pulse animation for selected state */}
+        {selected && (
+          <circle
+            r={size}
+            fill={color}
+            className="pulse-ring"
+            style={{ opacity: 0.2 }}
+          />
+        )}
+
+        {/* Main marker circle */}
+        <circle
+          r={size}
+          fill={color}
+          stroke="#FFFFFF"
+          strokeWidth={1}
+          opacity={selected ? 1 : 0.8}
+        />
+      </g>
     </Marker>
   );
 };

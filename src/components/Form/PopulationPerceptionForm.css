@@ -1,0 +1,228 @@
+.perception-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.form-section {
+  background: var(--surface);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  border: 6px solid var(--border-light);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.15);
+}
+
+.form-section-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  border-radius: 1rem 1rem 0 0;
+}
+
+.form-field {
+  margin-bottom: 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.975rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.form-select,
+.form-input {
+  width: 80%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  background-color: var(--surface);
+}
+
+.form-select:hover,
+.form-input:hover {
+  border-color: var(--primary-light);
+}
+
+.form-select:focus,
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* City Estimates */
+.city-estimate {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.city-estimate:hover {
+  background-color: var(--background);
+}
+
+.city-estimate:last-child {
+  border-bottom: none;
+}
+
+.city-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+}
+
+/* Submit Button */
+.submit-button {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  color: white;
+  border: none;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.submit-button:disabled {
+  background: var(--text-tertiary);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Error States */
+.form-input.error {
+  border-color: var(--error);
+}
+
+.form-input.error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.error-message {
+  color: var(--error);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-message::before {
+  content: "⚠️";
+}
+
+/* Statistics Panel */
+.stats-panel {
+  background: var(--surface);
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border: 1px solid var(--border-light);
+}
+
+.stats-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.stats-section {
+  background: var(--background);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: transform 0.2s ease;
+}
+
+.stats-section:hover {
+  transform: translateY(-2px);
+}
+
+/* Loading State */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+}
+
+.loading-text {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading-text::after {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .App {
+    padding: 1rem;
+  }
+
+  .app-title {
+    font-size: 2rem;
+  }
+
+  .app-description {
+    font-size: 1.1rem;
+  }
+
+  .form-section-title {
+    font-size: 1.25rem;
+    padding: 1.25rem;
+  }
+
+  .form-field {
+    padding: 0 1.25rem;
+  }
+
+  .submit-button {
+    padding: 0.875rem;
+    font-size: 1rem;
+  }
+}
