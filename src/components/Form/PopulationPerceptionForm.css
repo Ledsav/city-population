@@ -1,228 +1,268 @@
-.perception-form-container {
-  max-width: 800px;
+/* PopulationPerceptionForm.css */
+.form-container {
+  max-width: 32rem;
   margin: 0 auto;
   padding: 1.5rem;
 }
 
-.form-section {
-  background: var(--surface);
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.form-card {
+  background-color: transparent;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 0.5rem;
+  background-color: var(--border);
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-tertiary);
+  margin-top: 0.5rem;
+}
+
+.city-info {
+  text-align: center;
   margin-bottom: 2rem;
-  border: 6px solid var(--border-light);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.form-section:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 12px -2px rgba(0, 0, 0, 0.15);
+.city-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  background-color: var(--primary-light);
+  border-radius: 9999px;
+  margin-top: 1rem;
 }
 
-.form-section-title {
+.city-name {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 1.5rem;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--border);
-  border-radius: 1rem 1rem 0 0;
+  margin-bottom: 0.5rem;
 }
 
-.form-field {
-  margin-bottom: 1.5rem;
-  padding: 0 1.5rem;
+.city-country {
+  color: var(--text-tertiary);
 }
 
-.form-label {
+.input-group {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-label {
   display: block;
-  font-size: 0.975rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 0.75rem;
-}
-
-.form-select,
-.form-input {
-  width: 80%;
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--border);
-  border-radius: 0.75rem;
-  font-size: 1rem;
-  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--text-primary);
-  background-color: var(--surface);
+  margin-bottom: 0.5rem;
 }
 
-.form-select:hover,
-.form-input:hover {
-  border-color: var(--primary-light);
+.input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
 }
 
-.form-select:focus,
-.form-input:focus {
+.input-icon {
+  position: relative;
+  left: 2rem;
+  color: var(--text-tertiary);
+}
+
+.population-input {
+  width: 80%;
+  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+}
+
+.population-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* City Estimates */
-.city-estimate {
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--border-light);
-  transition: background-color 0.2s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.city-estimate:hover {
-  background-color: var(--background);
-}
-
-.city-estimate:last-child {
-  border-bottom: none;
-}
-
-.city-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.75rem;
-  font-size: 1.1rem;
-}
-
-/* Submit Button */
-.submit-button {
-  width: 100%;
-  padding: 1rem;
-  background: linear-gradient(to right, var(--primary), var(--secondary));
-  color: white;
-  border: none;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 1.1rem;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.submit-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-.submit-button:disabled {
-  background: var(--text-tertiary);
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Error States */
-.form-input.error {
+.population-input.error {
   border-color: var(--error);
-}
-
-.form-input.error:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .error-message {
   color: var(--error);
   font-size: 0.875rem;
   margin-top: 0.5rem;
+}
+
+.navigation {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.error-message::before {
-  content: "⚠️";
-}
-
-/* Statistics Panel */
-.stats-panel {
-  background: var(--surface);
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
-  border: 1px solid var(--border-light);
-}
-
-.stats-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--border);
-}
-
-.stats-section {
-  background: var(--background);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  transition: transform 0.2s ease;
-}
-
-.stats-section:hover {
-  transform: translateY(-2px);
-}
-
-/* Loading State */
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3rem;
-}
-
-.loading-text {
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
   gap: 1rem;
 }
 
-.loading-text::after {
-  content: "";
-  width: 1rem;
-  height: 1rem;
+.nav-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.button-prev {
+  background-color: var(--border-light);
+  color: var(--text-primary);
+}
+
+.button-prev:hover:not(:disabled) {
+  background-color: var(--border);
+}
+
+.button-next,
+.button-submit {
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  color: var(--surface);
+}
+
+.button-next:hover:not(:disabled),
+.button-submit:hover:not(:disabled) {
+  background: linear-gradient(
+    to right,
+    var(--primary-dark),
+    var(--secondary-dark)
+  );
+}
+
+.button-prev:disabled,
+.button-next:disabled,
+.button-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Demographics Form Styles */
+.demographics-form {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.demographics-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.demographics-subtitle {
+  color: var(--text-tertiary);
+  margin-bottom: 2rem;
+}
+
+.select-group {
+  margin-bottom: 1.5rem;
+}
+
+.select-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.demographics-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--surface);
+  transition: all 0.2s ease;
+}
+
+.demographics-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.start-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  color: var(--surface);
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.start-button:hover {
+  background: linear-gradient(
+    to right,
+    var(--primary-dark),
+    var(--secondary-dark)
+  );
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 3rem;
+  height: 3rem;
   border: 3px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-text {
+  color: var(--text-tertiary);
+  font-size: 1.125rem;
+  font-weight: 500;
 }
 
 @keyframes spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .App {
-    padding: 1rem;
-  }
-
-  .app-title {
-    font-size: 2rem;
-  }
-
-  .app-description {
-    font-size: 1.1rem;
-  }
-
-  .form-section-title {
-    font-size: 1.25rem;
-    padding: 1.25rem;
-  }
-
-  .form-field {
-    padding: 0 1.25rem;
-  }
-
-  .submit-button {
-    padding: 0.875rem;
-    font-size: 1rem;
   }
 }

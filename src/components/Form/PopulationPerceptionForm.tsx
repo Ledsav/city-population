@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { City, UserDemographics } from "@/types";
+import { Building2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "../../services/db";
 import "./PopulationPerceptionForm.css";
 
@@ -11,11 +12,13 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
   onSubmitSuccess,
 }) => {
   const [cities, setCities] = useState<City[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [currentCityIndex, setCurrentCityIndex] = useState(0);
   const [perceptions, setPerceptions] = useState<Record<string, number>>({});
   const [demographics, setDemographics] = useState<UserDemographics>({});
+  const [showDemographics, setShowDemographics] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadCities = async () => {
@@ -33,66 +36,71 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
     loadCities();
   }, []);
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
+  const currentCity = cities[currentCityIndex];
 
-    // Ensure all cities have estimates
-    cities.forEach((city) => {
-      if (!perceptions[city.id]) {
-        errors[city.id] = "Please provide an estimate for this city";
-      } else if (perceptions[city.id] <= 0) {
-        errors[city.id] = "Population must be greater than 0";
-      }
-    });
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handlePerceptionChange = (cityId: string, value: string) => {
-    const numValue = parseInt(value.replace(/[^0-9]/g, ""), 10);
+  const handlePopulationInput = (value: string) => {
+    const numValue = value.replace(/[^0-9]/g, "");
     setPerceptions((prev) => ({
       ...prev,
-      [cityId]: isNaN(numValue) ? 0 : numValue,
+      [currentCity.id]: numValue ? parseInt(numValue) : 0,
     }));
 
-    // Clear error for this city if it exists
-    if (formErrors[cityId]) {
+    if (formErrors[currentCity.id]) {
       setFormErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[cityId];
+        delete newErrors[currentCity.id];
         return newErrors;
       });
     }
   };
 
+  const formatPopulation = (value: number | string): string => {
+    if (!value) return "";
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    if (!perceptions[currentCity.id]) {
+      errors[currentCity.id] = "Please provide an estimate for this city";
+    } else if (perceptions[currentCity.id] <= 0) {
+      errors[currentCity.id] = "Population must be greater than 0";
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (!validateForm()) return;
+    if (currentCityIndex < cities.length - 1) {
+      setCurrentCityIndex((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentCityIndex > 0) {
+      setCurrentCityIndex((prev) => prev - 1);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setSubmitting(true);
-
     try {
-      // Submit each perception to IndexedDB
       await Promise.all(
         Object.entries(perceptions).map(([cityId, estimatedPopulation]) =>
           db.addPerception({
             cityId,
             estimatedPopulation,
             userDemographics: demographics,
-            confidenceLevel: 3, // Default confidence level
+            confidenceLevel: 3,
             timestamp: new Date().toISOString(),
           })
         )
       );
-
-      // Show success message briefly before transitioning to map
-      setTimeout(() => {
-        onSubmitSuccess();
-      }, 1000);
+      onSubmitSuccess();
     } catch (error) {
       console.error("Failed to submit perceptions:", error);
       setFormErrors({
@@ -105,23 +113,31 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-text">Loading cities...</div>
+      <div className="form-container">
+        <div className="form-card">
+          <div className="loading-state">
+            <div className="loading-spinner" />
+            <div className="loading-text">Loading cities...</div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="perception-form-container">
-      <form onSubmit={handleSubmit} className="form-grid">
-        {/* Demographics Section */}
-        <div className="form-section">
-          <h3 className="form-section-title">About You (Optional)</h3>
-          <div className="form-grid">
-            <div className="form-field">
-              <label className="form-label">Age Range</label>
+  if (showDemographics) {
+    return (
+      <div className="form-container">
+        <div className="form-card">
+          <div className="demographics-form">
+            <h2 className="demographics-title">Before We Start</h2>
+            <p className="demographics-subtitle">
+              Help us understand your perspective better
+            </p>
+
+            <div className="select-group">
+              <label className="select-label">Age Range</label>
               <select
-                className="form-select"
+                className="demographics-select"
                 value={demographics.ageRange || ""}
                 onChange={(e) =>
                   setDemographics((prev) => ({
@@ -130,72 +146,120 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
                   }))
                 }
               >
-                <option value="">Select age range</option>
-                <option value="18-24">18-24</option>
-                <option value="25-34">25-34</option>
-                <option value="35-44">35-44</option>
-                <option value="45-54">45-54</option>
-                <option value="55+">55+</option>
+                <option value="">Select your age range</option>
+                <option value="18-24">18-24 years</option>
+                <option value="25-34">25-34 years</option>
+                <option value="35-44">35-44 years</option>
+                <option value="45-54">45-54 years</option>
+                <option value="55+">55+ years</option>
               </select>
             </div>
 
-            <div className="form-field">
-              <label className="form-label">
-                Do you live in an urban area?
-              </label>
+            <div className="select-group">
+              <label className="select-label">Living Environment</label>
               <select
-                className="form-select"
-                value={demographics.urbanResidency ? "yes" : "no"}
+                className="demographics-select"
+                value={demographics.urbanResidency ? "urban" : "rural"}
                 onChange={(e) =>
                   setDemographics((prev) => ({
                     ...prev,
-                    urbanResidency: e.target.value === "yes",
+                    urbanResidency: e.target.value === "urban",
                   }))
                 }
               >
-                <option value="">Select option</option>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
+                <option value="">Select your environment</option>
+                <option value="urban">Urban Area</option>
+                <option value="rural">Rural Area</option>
               </select>
             </div>
+
+            <button
+              className="start-button"
+              onClick={() => setShowDemographics(false)}
+            >
+              Start Estimating Populations
+            </button>
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {/* City Estimates Section */}
-        <div className="form-section">
-          <h3 className="form-section-title">City Population Estimates</h3>
-          <div className="city-estimates">
-            {cities.map((city) => (
-              <div key={city.id} className="city-estimate">
-                <label className="city-name">
-                  {city.name}, {city.country}
-                </label>
-                <input
-                  type="text"
-                  className={`form-input ${formErrors[city.id] ? "error" : ""}`}
-                  placeholder="Enter estimated population"
-                  value={perceptions[city.id] || ""}
-                  onChange={(e) =>
-                    handlePerceptionChange(city.id, e.target.value)
-                  }
-                  pattern="[0-9]*"
-                />
-                {formErrors[city.id] && (
-                  <p className="error-message">{formErrors[city.id]}</p>
-                )}
-              </div>
-            ))}
+  const progress = ((currentCityIndex + 1) / cities.length) * 100;
+
+  return (
+    <div className="form-container">
+      <div className="form-card">
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="progress-text">
+          City {currentCityIndex + 1} of {cities.length}
+        </div>
+
+        <div className="city-info">
+          <div className="city-icon-wrapper">
+            <Building2 size={24} color="#2563eb" />
           </div>
+          <h2 className="city-name">{currentCity.name}</h2>
+          <p className="city-country">{currentCity.country}</p>
+        </div>
+
+        <div className="input-group">
+          <label className="input-label">
+            What's your population estimate?
+          </label>
+          <div className="input-wrapper">
+            <Users className="input-icon" size={20} />
+            <input
+              type="text"
+              value={formatPopulation(perceptions[currentCity.id] || "")}
+              onChange={(e) => handlePopulationInput(e.target.value)}
+              className={`population-input ${
+                formErrors[currentCity.id] ? "error" : ""
+              }`}
+              placeholder="Enter population estimate"
+            />
+          </div>
+          {formErrors[currentCity.id] && (
+            <p className="error-message">{formErrors[currentCity.id]}</p>
+          )}
+        </div>
+
+        <div className="navigation">
+          <button
+            onClick={handlePrevious}
+            disabled={currentCityIndex === 0}
+            className="nav-button button-prev"
+          >
+            <ChevronLeft size={20} />
+            Previous
+          </button>
+
+          {currentCityIndex === cities.length - 1 ? (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !perceptions[currentCity.id]}
+              className="nav-button button-submit"
+            >
+              {submitting ? "Submitting..." : "Submit All"}
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              disabled={!perceptions[currentCity.id]}
+              className="nav-button button-next"
+            >
+              Next
+              <ChevronRight size={20} />
+            </button>
+          )}
         </div>
 
         {formErrors.submit && (
-          <div className="form-error">{formErrors.submit}</div>
+          <p className="error-message">{formErrors.submit}</p>
         )}
-
-        <button type="submit" disabled={submitting} className="submit-button">
-          {submitting ? "Submitting..." : "Submit Estimates"}
-        </button>
-      </form>
+      </div>
     </div>
   );
 };
