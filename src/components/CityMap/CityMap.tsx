@@ -6,8 +6,10 @@ import {
   ZoomableGroup,
 } from "react-simple-maps";
 import type { CityWithPerceptions } from "@/types";
-import { CityMarker, CityTooltip } from "./components";
+import { CityMarker } from "./components/CityMarker";
+import { CityInfoPanel } from "./components/CityInfoPanel";
 import "./CityMap.css";
+import PopulationHeatmap from "./components/PopulationHeatmap";
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -17,20 +19,22 @@ interface CityMapProps {
 }
 
 export const CityMap: React.FC<CityMapProps> = ({ cities, onCitySelect }) => {
-  const [tooltipContent, setTooltipContent] = useState("");
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [selectedCityData, setSelectedCityData] =
+    useState<CityWithPerceptions | null>(null);
+  const [heatmapMode, setHeatmapMode] = useState<"actual" | "perceived">(
+    "actual"
+  );
+  const [showHeatmap, setShowHeatmap] = useState(true);
 
-  const getMarkerColor = (city: CityWithPerceptions) => {
+  const getCityClass = (city: CityWithPerceptions) => {
     const percentageOff =
       (city.perceptions.perceptionGap / city.officialPopulation) * 100;
 
-    // Red for overestimated, blue for underestimated
-    if (percentageOff > 0) {
-      return percentageOff > 50 ? "#dc2626" : "#ef4444";
-    } else {
-      return percentageOff < -50 ? "#2563eb" : "#3b82f6";
-    }
+    if (percentageOff > 50) return "highly-overestimated";
+    if (percentageOff > 0) return "slightly-overestimated";
+    if (percentageOff < -50) return "highly-underestimated";
+    return "slightly-underestimated";
   };
 
   const getMarkerSize = (city: CityWithPerceptions) => {
@@ -41,48 +45,14 @@ export const CityMap: React.FC<CityMapProps> = ({ cities, onCitySelect }) => {
     return selectedCity === city.id ? baseSize * 1.2 : baseSize;
   };
 
-  const handleCityMouseEnter =
-    (city: CityWithPerceptions) => (event: React.MouseEvent) => {
-      const mapContainer = (event.target as Element).closest(".map-container");
-      if (!mapContainer) return;
-
-      const mapRect = mapContainer.getBoundingClientRect();
-      const markerElement = (event.target as Element).closest(".city-marker");
-      if (!markerElement) return;
-
-      const markerRect = markerElement.getBoundingClientRect();
-
-      // Calculate position relative to the window
-      const x = markerRect.left + markerRect.width / 2;
-      const y = markerRect.top;
-
-      const percentageOff = (
-        (city.perceptions.perceptionGap / city.officialPopulation) *
-        100
-      ).toFixed(1);
-      const totalResponses = city.perceptions.totalPerceptions;
-
-      setTooltipPosition({ x, y });
-      setTooltipContent(`
-      ${city.name}, ${city.country}
-      Official: ${city.officialPopulation.toLocaleString()}
-      Perceived: ${city.perceptions.averagePerceivedPopulation.toLocaleString()}
-      Difference: ${Math.abs(
-        city.perceptions.perceptionGap
-      ).toLocaleString()} (${percentageOff}%)
-      ${
-        city.perceptions.perceptionGap > 0
-          ? "Over-estimated"
-          : "Under-estimated"
-      }
-      Based on ${totalResponses} ${
-        totalResponses === 1 ? "response" : "responses"
-      }
-    `);
-    };
-
   const handleCityClick = (city: CityWithPerceptions) => {
-    setSelectedCity(selectedCity === city.id ? null : city.id);
+    if (selectedCity === city.id) {
+      setSelectedCity(null);
+      setSelectedCityData(null);
+    } else {
+      setSelectedCity(city.id);
+      setSelectedCityData(city);
+    }
     onCitySelect?.(city);
   };
 
@@ -115,14 +85,47 @@ export const CityMap: React.FC<CityMapProps> = ({ cities, onCitySelect }) => {
 
   return (
     <div className="map-wrapper">
+      <div className="map-controls">
+        <button
+          onClick={() => setShowHeatmap(!showHeatmap)}
+          className="control-button"
+        >
+          {showHeatmap ? "Hide" : "Show"} Heatmap
+        </button>
+        {showHeatmap && (
+          <select
+            value={heatmapMode}
+            onChange={(e) =>
+              setHeatmapMode(e.target.value as "actual" | "perceived")
+            }
+            className="mode-select"
+          >
+            <option value="actual">Actual Population</option>
+            <option value="perceived">Perceived Population</option>
+          </select>
+        )}
+      </div>
+
       <div className="map-container">
         <ComposableMap
           projection="geoMercator"
           projectionConfig={{
             scale: 130,
+            center: [0, 0],
           }}
         >
-          <ZoomableGroup center={[0, 0]} zoom={1}>
+          <ZoomableGroup
+            center={[0, 0]}
+            zoom={1}
+            minZoom={1}
+            maxZoom={3}
+            // Limit horizontal movement (longitude: -180 to 180)
+            //limit vertical movement (latitude: -90 to 90)
+            translateExtent={[
+              [0, 0],
+              [1000, 1000],
+            ]}
+          >
             <Geographies geography={geoUrl}>
               {({ geographies }) =>
                 geographies.map((geo) => (
@@ -138,23 +141,60 @@ export const CityMap: React.FC<CityMapProps> = ({ cities, onCitySelect }) => {
               }
             </Geographies>
 
+            {showHeatmap && (
+              <PopulationHeatmap
+                cities={cities}
+                width={800}
+                height={400}
+                mode={heatmapMode}
+                scale={130} // Match this with ComposableMap's scale
+                center={[0, 33]} // Match this with ZoomableGroup's center
+                intensity={100}
+                blur={25}
+                opacity={0.8}
+                colorScale={
+                  heatmapMode === "actual"
+                    ? {
+                        low: "#3b82f6",
+                        medium: "#7c3aed",
+                        high: "#db2777",
+                      }
+                    : {
+                        low: "#84cc16",
+                        medium: "#eab308",
+                        high: "#ef4444",
+                      }
+                }
+              />
+            )}
+
             {cities.map((city) => (
               <CityMarker
                 key={city.id}
                 city={city}
-                color={getMarkerColor(city)}
                 size={getMarkerSize(city)}
                 selected={selectedCity === city.id}
-                onMouseEnter={handleCityMouseEnter(city)}
-                onMouseLeave={() => setTooltipContent("")}
+                className={getCityClass(city)}
+                onMouseEnter={() => {}}
+                onMouseLeave={() => {}}
                 onClick={() => handleCityClick(city)}
               />
             ))}
           </ZoomableGroup>
         </ComposableMap>
-
-        <CityTooltip content={tooltipContent} position={tooltipPosition} />
       </div>
+
+      {/* City Info Panel */}
+      {selectedCityData && (
+        <CityInfoPanel
+          city={selectedCityData}
+          class={getCityClass(selectedCityData)}
+          onClose={() => {
+            setSelectedCityData(null);
+            setSelectedCity(null);
+          }}
+        />
+      )}
 
       <div className="stats-panel">
         <h2 className="stats-title">Population Perception Analysis</h2>
@@ -165,37 +205,25 @@ export const CityMap: React.FC<CityMapProps> = ({ cities, onCitySelect }) => {
             <h3 className="stats-section-title">Legend</h3>
             <div className="legend-items">
               <div className="legend-item">
-                <div
-                  className="legend-marker"
-                  style={{ backgroundColor: "#dc2626" }}
-                ></div>
+                <div className="legend-marker highly-overestimated"></div>
                 <span className="legend-text">
                   Highly overestimated ({">"}50%)
                 </span>
               </div>
               <div className="legend-item">
-                <div
-                  className="legend-marker"
-                  style={{ backgroundColor: "#ef4444" }}
-                ></div>
+                <div className="legend-marker slightly-overestimated"></div>
                 <span className="legend-text">
                   Slightly overestimated (0-50%)
                 </span>
               </div>
               <div className="legend-item">
-                <div
-                  className="legend-marker"
-                  style={{ backgroundColor: "#3b82f6" }}
-                ></div>
+                <div className="legend-marker slightly-underestimated"></div>
                 <span className="legend-text">
                   Slightly underestimated (0-50%)
                 </span>
               </div>
               <div className="legend-item">
-                <div
-                  className="legend-marker"
-                  style={{ backgroundColor: "#2563eb" }}
-                ></div>
+                <div className="legend-marker highly-underestimated"></div>
                 <span className="legend-text">
                   Highly underestimated ({">"}50%)
                 </span>

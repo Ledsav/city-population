@@ -4,9 +4,9 @@ import type { CityWithPerceptions } from "@/types";
 
 type CityMarkerProps = {
   city: CityWithPerceptions;
-  color: string;
   size: number;
   selected: boolean;
+  className: string;
   onMouseEnter: (event: React.MouseEvent) => void;
   onMouseLeave: () => void;
   onClick: () => void;
@@ -14,9 +14,9 @@ type CityMarkerProps = {
 
 export const CityMarker: React.FC<CityMarkerProps> = ({
   city,
-  color,
   size,
   selected,
+  className,
   onMouseEnter,
   onMouseLeave,
   onClick,
@@ -26,29 +26,13 @@ export const CityMarker: React.FC<CityMarkerProps> = ({
       coordinates={[city.coordinates.longitude, city.coordinates.latitude]}
     >
       <g
-        className={`city-marker ${selected ? "selected" : ""}`}
+        className={`city-marker ${selected ? "selected" : ""} ${className}`}
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         onClick={onClick}
       >
-        {/* Pulse animation for selected state */}
-        {selected && (
-          <circle
-            r={size}
-            fill={color}
-            className="pulse-ring"
-            style={{ opacity: 0.2 }}
-          />
-        )}
-
-        {/* Main marker circle */}
-        <circle
-          r={size}
-          fill={color}
-          stroke="#FFFFFF"
-          strokeWidth={1}
-          opacity={selected ? 1 : 0.8}
-        />
+        {selected && <circle r={size} className="pulse-ring" />}
+        <circle r={size} className="marker-circle" />
       </g>
     </Marker>
   );

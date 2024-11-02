@@ -1,42 +1,67 @@
-import React from "react";
+import React, { useMemo } from "react";
 
 type CityTooltipProps = {
   content: string;
-  position?: { x: number; y: number };
+  position: { x: number; y: number };
+  containerBounds?: DOMRect;
 };
 
 export const CityTooltip: React.FC<CityTooltipProps> = ({
   content,
   position,
+  containerBounds,
 }) => {
-  if (!content) return null;
+  const tooltipPosition = useMemo(() => {
+    if (!containerBounds) return { x: 0, y: 0 };
+
+    const tooltipWidth = 320;
+    const tooltipHeight = 200;
+    const padding = 10;
+
+    let x = position.x;
+    let y = position.y;
+
+    // Adjust horizontal position if tooltip would overflow
+    if (x + tooltipWidth / 2 > containerBounds.width) {
+      x = containerBounds.width - tooltipWidth / 2 - padding;
+    } else if (x - tooltipWidth / 2 < 0) {
+      x = tooltipWidth / 2 + padding;
+    }
+
+    y = y - tooltipHeight - padding;
+
+    // // Adjust vertical position if tooltip would overflow
+    // if (y - tooltipHeight < 0) {
+    //   // Place tooltip below the marker if it would overflow at the top
+    //   y = y + padding;
+    // } else {
+    //   // Otherwise, place it above the marker
+
+    // }
+
+    return { x, y };
+  }, [position, containerBounds]);
+
+  // Early return moved after useMemo
+  if (!content || !containerBounds) return null;
 
   // Parse the content
   const lines = content.trim().split("\n");
   const [cityInfo, officialPop, perceivedPop, gap, estimation, responses] =
     lines.map((line) => line.trim());
 
-  // Extract city name and country
   const [name, country] = cityInfo.split(",").map((s) => s.trim());
-
-  // Extract numbers
   const officialNumber = officialPop.split(":")[1].trim();
   const perceivedNumber = perceivedPop.split(":")[1].trim();
   const gapNumber = gap.split(":")[1].trim();
   const estimationType = estimation.trim();
 
-  const tooltipWidth = 320;
-  const safeX = Math.min(
-    Math.max(position?.x ?? 0, tooltipWidth / 2),
-    window.innerWidth - tooltipWidth / 2
-  );
-
   return (
     <div
       className="tooltip tooltip-enter"
       style={{
-        left: `${safeX}px`,
-        top: `${position?.y ?? 0}px`,
+        left: `${tooltipPosition.x}px`,
+        top: `${tooltipPosition.y}px`,
       }}
     >
       <div className="tooltip-header">
@@ -85,8 +110,6 @@ export const CityTooltip: React.FC<CityTooltipProps> = ({
 
         <div className="tooltip-responses">{responses}</div>
       </div>
-
-      <div className="tooltip-arrow"></div>
     </div>
   );
 };
