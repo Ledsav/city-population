@@ -26,13 +26,13 @@ export const CityInfoPanel = ({
           ×
         </button>
 
-        <div className="info-grid">
-          {/* City Info */}
-          <div className="info-section">
-            <h3 className="city-name">{city.name}</h3>
-            <p className="city-country">{city.country}</p>
-          </div>
+        {/* City Header - Improved contrast with dedicated styling */}
+        <div className="city-header">
+          <h2 className="city-title">{city.name}</h2>
+          <p className="city-subtitle">{city.country}</p>
+        </div>
 
+        <div className="info-grid">
           {/* Population Stats */}
           <div className="population-stats">
             <div className="stat-group">

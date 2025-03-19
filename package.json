@@ -11,17 +11,22 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/react-simple-maps": "^3.0.6",
+    "@types/three": "0.159.0",
     "lucide-react": "^0.454.0",
+    "npm": "^10.9.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
     "react-simple-maps": "^3.0.0",
+    "three": "0.159.0",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start:dev": "cross-env REACT_APP_DEV_MODE=true react-scripts start",
+    "start:prod": "cross-env REACT_APP_DEV_MODE=false react-scripts start",
+    "build": "cross-env REACT_APP_DEV_MODE=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -42,5 +47,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "cross-env": "^7.0.3"
   }
 }

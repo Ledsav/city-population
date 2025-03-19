@@ -1,13 +1,13 @@
 // src/App.tsx
-import React, { useState, useEffect } from "react";
-import { CityMap } from "./components/CityMap/CityMap";
+import { useEffect, useState } from "react";
+import "./App.css";
+import { CityGlobe } from "./components/CityGlobe";
 import PopulationPerceptionForm from "./components/Form/PopulationPerceptionForm";
 import { dbInitializer } from "./services/dbInitializer";
 import type { CityWithPerceptions } from "./types";
-import "./App.css";
 
 const App = () => {
-  const [showMap, setShowMap] = useState(false);
+  const [showGlobe, setShowGlobe] = useState(false);
   const [citiesWithPerceptions, setCitiesWithPerceptions] = useState<
     CityWithPerceptions[]
   >([]);
@@ -19,7 +19,7 @@ const App = () => {
       try {
         setLoading(true);
         await dbInitializer.initializeDatabase();
-        if (showMap) {
+        if (showGlobe) {
           await loadCityData();
         }
       } catch (err) {
@@ -33,7 +33,7 @@ const App = () => {
     };
 
     initializeApp();
-  }, [showMap]);
+  }, [showGlobe]);
 
   const loadCityData = async () => {
     try {
@@ -57,7 +57,7 @@ const App = () => {
   const handleFormSubmitted = async () => {
     try {
       await loadCityData();
-      setShowMap(true);
+      setShowGlobe(true);
     } catch (err) {
       setError("Failed to load updated city data. Please try again.");
       console.error("Form submission error:", err);
@@ -65,17 +65,17 @@ const App = () => {
   };
 
   return (
-    <div className="App">
-      <header className="app-header">
-        <h1 className="app-title">City Population Perception Map</h1>
-        <p className="app-description">
-          {!showMap
-            ? "Help us understand how people perceive city populations by sharing your estimates."
-            : "Explore how people perceive city populations around the world and compare their estimates with actual numbers."}
-        </p>
-      </header>
+    <div className={`App ${showGlobe ? 'globe-mode' : ''}`}>
+      {!showGlobe && (
+        <header className="app-header">
+          <h1 className="app-title">3D City Population Globe</h1>
+          <p className="app-description">
+            Help us understand how people perceive city populations by sharing your estimates.
+          </p>
+        </header>
+      )}
 
-      <main className="app-content">
+      <main className={`app-content ${showGlobe ? 'fullscreen' : ''}`}>
         {loading ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
@@ -85,17 +85,17 @@ const App = () => {
             <span>⚠️</span>
             <p>{error}</p>
           </div>
-        ) : !showMap ? (
+        ) : !showGlobe ? (
           <PopulationPerceptionForm onSubmitSuccess={handleFormSubmitted} />
         ) : (
-          <div>
-            <CityMap
+          <div className="globe-view">
+            <CityGlobe
               cities={citiesWithPerceptions}
               onCitySelect={(city) => console.log("Selected city:", city)}
             />
             <div className="button-container">
               <button
-                onClick={() => setShowMap(false)}
+                onClick={() => setShowGlobe(false)}
                 className="submit-new-estimates"
               >
                 Submit New Estimates

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
 import { City, UserDemographics } from "@/types";
-import { Building2, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Briefcase, ChevronLeft, ChevronRight, Globe, Home, MapPin, Users } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { db } from "../../services/db";
 import "./PopulationPerceptionForm.css";
 
@@ -19,6 +19,7 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [confidence, setConfidence] = useState(3);
 
   useEffect(() => {
     const loadCities = async () => {
@@ -95,7 +96,7 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
             cityId,
             estimatedPopulation,
             userDemographics: demographics,
-            confidenceLevel: 3,
+            confidenceLevel: confidence,
             timestamp: new Date().toISOString(),
           })
         )
@@ -109,6 +110,11 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
     } finally {
       setSubmitting(false);
     }
+  };
+  
+  const handleSkipDemographics = () => {
+    setDemographics({});
+    setShowDemographics(false);
   };
 
   if (loading) {
@@ -127,15 +133,23 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
   if (showDemographics) {
     return (
       <div className="form-container">
-        <div className="form-card">
-          <div className="demographics-form">
+        <div className="form-card demographics-card">
+          <div className="demographics-header">
+            <div className="demographics-icon">
+              <Globe size={32} strokeWidth={1.5} />
+            </div>
             <h2 className="demographics-title">Before We Start</h2>
             <p className="demographics-subtitle">
-              Help us understand your perspective better
+              Help us understand population perceptions across different demographics
             </p>
+          </div>
 
+          <div className="demographics-form">
             <div className="select-group">
-              <label className="select-label">Age Range</label>
+              <label className="select-label">
+                <span className="select-icon"><Briefcase size={16} /></span>
+                Age Range
+              </label>
               <select
                 className="demographics-select"
                 value={demographics.ageRange || ""}
@@ -156,10 +170,13 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
             </div>
 
             <div className="select-group">
-              <label className="select-label">Living Environment</label>
+              <label className="select-label">
+                <span className="select-icon"><Home size={16} /></span>
+                Living Environment
+              </label>
               <select
                 className="demographics-select"
-                value={demographics.urbanResidency ? "urban" : "rural"}
+                value={demographics.urbanResidency === undefined ? "" : demographics.urbanResidency ? "urban" : "rural"}
                 onChange={(e) =>
                   setDemographics((prev) => ({
                     ...prev,
@@ -173,12 +190,21 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
               </select>
             </div>
 
-            <button
-              className="start-button"
-              onClick={() => setShowDemographics(false)}
-            >
-              Start Estimating Populations
-            </button>
+            <div className="demographics-actions">
+              <button
+                className="start-button primary-button"
+                onClick={() => setShowDemographics(false)}
+              >
+                Start Estimating
+              </button>
+              
+              <button 
+                className="skip-button secondary-button"
+                onClick={handleSkipDemographics}
+              >
+                Skip this step
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -189,17 +215,19 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
 
   return (
     <div className="form-container">
-      <div className="form-card">
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${progress}%` }} />
-        </div>
-        <div className="progress-text">
-          City {currentCityIndex + 1} of {cities.length}
+      <div className="form-card estimation-card">
+        <div className="progress-container">
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="progress-text">
+            City {currentCityIndex + 1} of {cities.length}
+          </div>
         </div>
 
         <div className="city-info">
           <div className="city-icon-wrapper">
-            <Building2 size={24} color="#2563eb" />
+            <MapPin size={24} />
           </div>
           <h2 className="city-name">{currentCity.name}</h2>
           <p className="city-country">{currentCity.country}</p>
@@ -222,8 +250,31 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
             />
           </div>
           {formErrors[currentCity.id] && (
-            <p className="error-message">{formErrors[currentCity.id]}</p>
+            <p className="error-message">
+              <span className="error-icon">⚠️</span>
+              {formErrors[currentCity.id]}
+            </p>
           )}
+        </div>
+        
+        <div className="confidence-selector">
+          <label className="confidence-label">How confident are you in your estimate?</label>
+          <div className="confidence-options">
+            {[1, 2, 3, 4, 5].map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={`confidence-button ${confidence === level ? 'selected' : ''}`}
+                onClick={() => setConfidence(level)}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          <div className="confidence-scale">
+            <span>Not confident</span>
+            <span>Very confident</span>
+          </div>
         </div>
 
         <div className="navigation">
@@ -242,7 +293,14 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
               disabled={submitting || !perceptions[currentCity.id]}
               className="nav-button button-submit"
             >
-              {submitting ? "Submitting..." : "Submit All"}
+              {submitting ? (
+                <>
+                  <span className="spinner"></span>
+                  Submitting...
+                </>
+              ) : (
+                "Submit All"
+              )}
             </button>
           ) : (
             <button
@@ -257,7 +315,10 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
         </div>
 
         {formErrors.submit && (
-          <p className="error-message">{formErrors.submit}</p>
+          <p className="error-message global-error">
+            <span className="error-icon">⚠️</span>
+            {formErrors.submit}
+          </p>
         )}
       </div>
     </div>
