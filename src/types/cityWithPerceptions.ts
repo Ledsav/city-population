@@ -5,7 +5,7 @@ export type CityWithPerceptions = City & {
   perceptions: {
     averagePerceivedPopulation: number;
     totalPerceptions: number;
-    perceptionGap: number; // difference between perceived and actual
+    perceptionGap: number; 
     perceptions: PopulationPerception[];
   };
 };

@@ -1,109 +1,154 @@
-// src/components/CityGlobe/TextureLoader.ts
 import * as THREE from 'three';
 
+import earthCloudsTexture from '../../assets/maps/8k_earth_clouds.jpg';
+import earthDaymapTexture from '../../assets/maps/8k_earth_daymap.jpg';
+import earthNormalMapTexture from '../../assets/maps/8k_earth_normal_map.tif';
+import earthSpecularMapTexture from '../../assets/maps/8k_earth_specular_map.tif';
+
 export class TextureLoader {
-  /**
-   * Loads textures dynamically with error handling and fallbacks
-   */
   static async loadEarthTextures(): Promise<{
     map: THREE.Texture;
     bumpMap: THREE.Texture;
+    normalMap?: THREE.Texture;
     specularMap?: THREE.Texture;
+    cloudMap?: THREE.Texture;
   }> {
     const textureLoader = new THREE.TextureLoader();
     
-    // URLs for Earth textures (from NASA Blue Marble collection)
     const textureURLs = {
-      map: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
-      bumpMap: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg',
-      specularMap: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg'
+      map: earthDaymapTexture,
+      normalMap: earthNormalMapTexture,
+      specularMap: earthSpecularMapTexture,
+      cloudMap: earthCloudsTexture,
+      
+      mapFallback: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
+      normalMapFallback: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_normal_2048.jpg',
+      specularMapFallback: 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_specular_2048.jpg',
     };
     
-    // Fallback plain textures in case downloads fail
     const fallbackColors = {
-      map: 0x2233ff,       // Blue for oceans
-      bumpMap: 0x888888,    // Grey for bump map
-      specularMap: 0xffffff // White for specular
+      map: 0x1A3771,
+      bumpMap: 0x888888,
+      specularMap: 0xffffff,
+      cloudMap: 0xffffff
     };
     
-    // Load textures with Promise
-    const loadTexture = (url: string, fallbackColor: number): Promise<THREE.Texture> => {
+    const loadTexture = (url: string, fallbackUrl: string | null, fallbackColor: number): Promise<THREE.Texture> => {
       return new Promise((resolve) => {
-        // Try to load the texture
         textureLoader.load(
           url,
-          // On success
           (texture) => {
+            texture.anisotropy = 16;
+            texture.encoding = THREE.sRGBEncoding;
+            texture.minFilter = THREE.LinearMipmapLinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            texture.wrapS = THREE.ClampToEdgeWrapping;
+            texture.wrapT = THREE.ClampToEdgeWrapping;
             resolve(texture);
           },
-          // On progress (unused)
           undefined,
-          // On error
           () => {
-            console.warn(`Failed to load texture from ${url}, using fallback`);
-            
-            // Create a canvas with the fallback color
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            
-            if (ctx) {
-              ctx.fillStyle = `#${fallbackColor.toString(16).padStart(6, '0')}`;
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              
-              // For earth texture, add some land
-              if (fallbackColor === fallbackColors.map) {
-                ctx.fillStyle = '#116622'; // Green for land
-                
-                // Draw some continents (simplified)
-                ctx.beginPath();
-                ctx.ellipse(canvas.width * 0.35, canvas.height * 0.4, 100, 150, 0, 0, 2 * Math.PI); // North America
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.ellipse(canvas.width * 0.45, canvas.height * 0.65, 70, 90, 0, 0, 2 * Math.PI); // South America
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.ellipse(canvas.width * 0.55, canvas.height * 0.4, 80, 90, 0, 0, 2 * Math.PI); // Europe/Africa
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.ellipse(canvas.width * 0.75, canvas.height * 0.45, 100, 100, 0, 0, 2 * Math.PI); // Asia
-                ctx.fill();
-                
-                ctx.beginPath();
-                ctx.ellipse(canvas.width * 0.85, canvas.height * 0.75, 60, 40, 0, 0, 2 * Math.PI); // Australia
-                ctx.fill();
-              }
+            if (fallbackUrl) {
+              console.warn(`Failed to load texture from ${url}, trying fallback URL`);
+              textureLoader.load(
+                fallbackUrl,
+                (texture) => {
+                  texture.anisotropy = 16;
+                  texture.encoding = THREE.sRGBEncoding;
+                  resolve(texture);
+                },
+                undefined,
+                () => {
+                  console.warn(`Failed to load fallback texture, using canvas fallback`);
+                  resolve(createCanvasFallback(fallbackColor));
+                }
+              );
+            } else {
+              console.warn(`Failed to load texture from ${url}, using canvas fallback`);
+              resolve(createCanvasFallback(fallbackColor));
             }
-            
-            const texture = new THREE.CanvasTexture(canvas);
-            resolve(texture);
           }
         );
       });
     };
     
-    // Load all textures in parallel
+    const createCanvasFallback = (color: number): THREE.Texture => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.fillStyle = `#${color.toString(16).padStart(6, '0')}`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (color === fallbackColors.map) {
+          ctx.fillStyle = '#116622';
+          
+          ctx.beginPath();
+          ctx.ellipse(canvas.width * 0.35, canvas.height * 0.4, 100, 150, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.ellipse(canvas.width * 0.45, canvas.height * 0.65, 70, 90, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.ellipse(canvas.width * 0.55, canvas.height * 0.4, 80, 90, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.ellipse(canvas.width * 0.75, canvas.height * 0.45, 100, 100, 0, 0, 2 * Math.PI);
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.ellipse(canvas.width * 0.85, canvas.height * 0.75, 60, 40, 0, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        else if (color === fallbackColors.cloudMap) {
+          ctx.globalAlpha = 0.7;
+          for (let i = 0; i < 20; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 20 + Math.random() * 60;
+            
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = 4;
+      return texture;
+    };
+    
     try {
-      const [map, bumpMap, specularMap] = await Promise.all([
-        loadTexture(textureURLs.map, fallbackColors.map),
-        loadTexture(textureURLs.bumpMap, fallbackColors.bumpMap),
-        loadTexture(textureURLs.specularMap, fallbackColors.specularMap)
+      const [map, normalMap, specularMap, cloudMap] = await Promise.all([
+        loadTexture(textureURLs.map, textureURLs.mapFallback, fallbackColors.map),
+        loadTexture(textureURLs.normalMap, textureURLs.normalMapFallback, fallbackColors.bumpMap),
+        loadTexture(textureURLs.specularMap, textureURLs.specularMapFallback, fallbackColors.specularMap),
+        loadTexture(textureURLs.cloudMap, null, fallbackColors.cloudMap)
       ]);
       
-      return { map, bumpMap, specularMap };
+      return { 
+        map, 
+        bumpMap: normalMap,
+        normalMap,
+        specularMap,
+        cloudMap
+      };
     } catch (error) {
       console.error('Error loading textures:', error);
       
-      // Return basic textures as a last resort
-      const basicMap = new THREE.Texture();
-      basicMap.needsUpdate = true;
-      
-      const basicBumpMap = new THREE.Texture();
-      basicBumpMap.needsUpdate = true;
+      const basicMap = createCanvasFallback(fallbackColors.map);
+      const basicBumpMap = createCanvasFallback(fallbackColors.bumpMap);
       
       return { map: basicMap, bumpMap: basicBumpMap };
     }

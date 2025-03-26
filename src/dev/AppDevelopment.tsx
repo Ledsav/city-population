@@ -48,20 +48,7 @@ const AppDevelopment = () => {
     }
   };
 
-  // Optionally reload data (useful during development)
-  const handleReloadData = async () => {
-    try {
-      setLoading(true);
-      // Reset the database to get fresh data
-      await dbInitializer.reset();
-      await loadCityData();
-    } catch (err) {
-      setError("Failed to reload data. Please try refreshing the page.");
-      console.error("Reload error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="App globe-mode">
@@ -81,15 +68,6 @@ const AppDevelopment = () => {
               cities={citiesWithPerceptions}
               onCitySelect={(city) => console.log("Selected city:", city)}
             />
-            <div className="button-container">
-              <button
-                onClick={handleReloadData}
-                className="submit-new-estimates"
-                style={{ marginRight: '8px' }}
-              >
-                Reload Data
-              </button>
-            </div>
           </div>
         )}
       </main>
