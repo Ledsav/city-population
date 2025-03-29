@@ -1,26 +1,26 @@
-import { City, UserDemographics } from "@/types";
-import { Briefcase, ChevronLeft, ChevronRight, Globe, Home, MapPin, Users } from "lucide-react";
+import { City } from "@/types";
+import { CheckCircle, ChevronLeft, ChevronRight, Globe, MapPin, Shield, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { db } from "../../services/db";
 import "./PopulationPerceptionForm.css";
 
-type PopulationPerceptionFormProps = {
+type PerceptionFormProps = {
   onSubmitSuccess: () => void;
 };
 
-const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
+const PerceptionForm: React.FC<PerceptionFormProps> = ({
   onSubmitSuccess,
 }) => {
   const [cities, setCities] = useState<City[]>([]);
-  const [currentCityIndex, setCurrentCityIndex] = useState(0);
-  const [perceptions, setPerceptions] = useState<Record<string, number>>({});
-  const [demographics, setDemographics] = useState<UserDemographics>({});
-  const [showDemographics, setShowDemographics] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [selectedCities, setSelectedCities] = useState<Set<string>>(new Set());
+  const [estimations, setEstimations] = useState<Record<string, number>>({});
+  const [confidenceLevels, setConfidenceLevels] = useState<Record<string, number>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [confidence, setConfidence] = useState(3);
-
+  const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<"selection" | "estimation">("selection");
+  const [currentEstimatingIndex, setCurrentEstimatingIndex] = useState(0);
+  
   useEffect(() => {
     const loadCities = async () => {
       try {
@@ -37,292 +37,336 @@ const PopulationPerceptionForm: React.FC<PopulationPerceptionFormProps> = ({
     loadCities();
   }, []);
 
-  const currentCity = cities[currentCityIndex];
-
-  const handlePopulationInput = (value: string) => {
-    const numValue = value.replace(/[^0-9]/g, "");
-    setPerceptions((prev) => ({
-      ...prev,
-      [currentCity.id]: numValue ? parseInt(numValue) : 0,
-    }));
-
-    if (formErrors[currentCity.id]) {
-      setFormErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[currentCity.id];
-        return newErrors;
-      });
+  const toggleCitySelection = (cityId: string) => {
+    const newSelectedCities = new Set(selectedCities);
+    
+    if (newSelectedCities.has(cityId)) {
+      newSelectedCities.delete(cityId);
+      
+      // Remove estimations when deselecting a city
+      const newEstimations = { ...estimations };
+      delete newEstimations[cityId];
+      setEstimations(newEstimations);
+      
+      const newConfidenceLevels = { ...confidenceLevels };
+      delete newConfidenceLevels[cityId];
+      setConfidenceLevels(newConfidenceLevels);
+    } else {
+      newSelectedCities.add(cityId);
+    }
+    
+    setSelectedCities(newSelectedCities);
+  };
+  
+  const handleSelectAllCities = () => {
+    if (selectedCities.size === cities.length) {
+      // Deselect all
+      setSelectedCities(new Set());
+      setEstimations({});
+      setConfidenceLevels({});
+    } else {
+      // Select all
+      const allCityIds = cities.map(city => city.id);
+      setSelectedCities(new Set(allCityIds));
     }
   };
-
-  const formatPopulation = (value: number | string): string => {
+  
+  const startEstimating = () => {
+    if (selectedCities.size > 0) {
+      setViewMode("estimation");
+      setCurrentEstimatingIndex(0);
+    }
+  };
+  
+  const handlePopulationInput = (cityId: string, value: string) => {
+    const numValue = value.replace(/[^0-9]/g, "");
+    const numericValue = numValue ? parseInt(numValue) : 0;
+    
+    setEstimations(prev => ({
+      ...prev,
+      [cityId]: numericValue
+    }));
+    
+    // Clear error if input is valid
+    if (numericValue > 0 && errors[cityId]) {
+      const newErrors = { ...errors };
+      delete newErrors[cityId];
+      setErrors(newErrors);
+    }
+  };
+  
+  const setConfidenceLevel = (cityId: string, level: number) => {
+    setConfidenceLevels(prev => ({
+      ...prev,
+      [cityId]: level
+    }));
+  };
+  
+  const formatPopulation = (value: number | undefined): string => {
     if (!value) return "";
     return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
-
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-    if (!perceptions[currentCity.id]) {
-      errors[currentCity.id] = "Please provide an estimate for this city";
-    } else if (perceptions[currentCity.id] <= 0) {
-      errors[currentCity.id] = "Population must be greater than 0";
+  
+  const validateCurrentEstimation = () => {
+    const selectedCitiesArray = Array.from(selectedCities);
+    if (currentEstimatingIndex >= selectedCitiesArray.length) return true;
+    
+    const currentCityId = selectedCitiesArray[currentEstimatingIndex];
+    const currentEstimation = estimations[currentCityId];
+    
+    if (!currentEstimation || currentEstimation <= 0) {
+      setErrors({
+        ...errors,
+        [currentCityId]: "Please enter a valid population estimate"
+      });
+      return false;
     }
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    
+    return true;
   };
-
-  const handleNext = () => {
-    if (!validateForm()) return;
-    if (currentCityIndex < cities.length - 1) {
-      setCurrentCityIndex((prev) => prev + 1);
+  
+  const handleNextCity = () => {
+    if (!validateCurrentEstimation()) return;
+    
+    const selectedCitiesArray = Array.from(selectedCities);
+    if (currentEstimatingIndex < selectedCitiesArray.length - 1) {
+      setCurrentEstimatingIndex(prev => prev + 1);
     }
   };
-
-  const handlePrevious = () => {
-    if (currentCityIndex > 0) {
-      setCurrentCityIndex((prev) => prev - 1);
+  
+  const handlePreviousCity = () => {
+    if (currentEstimatingIndex > 0) {
+      setCurrentEstimatingIndex(prev => prev - 1);
     }
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
+  
+  const handleSubmit = async () => {
+    if (!validateCurrentEstimation()) return;
+    
+    // Check if all selected cities have estimations
+    const selectedCitiesArray = Array.from(selectedCities);
+    const missingEstimations = selectedCitiesArray.filter(cityId => !estimations[cityId]);
+    
+    if (missingEstimations.length > 0) {
+      alert(`Please complete your estimations for all selected cities.`);
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await Promise.all(
-        Object.entries(perceptions).map(([cityId, estimatedPopulation]) =>
+        selectedCitiesArray.map(cityId => 
           db.addPerception({
             cityId,
-            estimatedPopulation,
-            userDemographics: demographics,
-            confidenceLevel: confidence,
+            estimatedPopulation: estimations[cityId],
+            confidenceLevel: confidenceLevels[cityId] || 3, // Default to medium confidence
             timestamp: new Date().toISOString(),
           })
         )
       );
       onSubmitSuccess();
     } catch (error) {
-      console.error("Failed to submit perceptions:", error);
-      setFormErrors({
-        submit: "Failed to submit estimates. Please try again.",
+      console.error("Failed to submit estimations:", error);
+      setErrors({
+        submit: "Failed to submit your estimations. Please try again."
       });
     } finally {
       setSubmitting(false);
     }
   };
   
-  const handleSkipDemographics = () => {
-    setDemographics({});
-    setShowDemographics(false);
+  const goBackToSelection = () => {
+    setViewMode("selection");
   };
-
+  
   if (loading) {
     return (
-      <div className="form-container">
-        <div className="form-card">
-          <div className="loading-state">
-            <div className="loading-spinner" />
-            <div className="loading-text">Loading cities...</div>
-          </div>
+      <div className="simple-form-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className="loading-text">Loading cities from around the world...</p>
         </div>
       </div>
     );
   }
-
-  if (showDemographics) {
+  
+  if (viewMode === "selection") {
     return (
-      <div className="form-container">
-        <div className="form-card demographics-card">
-          <div className="demographics-header">
-            <div className="demographics-icon">
-              <Globe size={32} strokeWidth={1.5} />
-            </div>
-            <h2 className="demographics-title">Before We Start</h2>
-            <p className="demographics-subtitle">
-              Help us understand population perceptions across different demographics
-            </p>
-          </div>
-
-          <div className="demographics-form">
-            <div className="select-group">
-              <label className="select-label">
-                <span className="select-icon"><Briefcase size={16} /></span>
-                Age Range
-              </label>
-              <select
-                className="demographics-select"
-                value={demographics.ageRange || ""}
-                onChange={(e) =>
-                  setDemographics((prev) => ({
-                    ...prev,
-                    ageRange: e.target.value,
-                  }))
-                }
-              >
-                <option value="">Select your age range</option>
-                <option value="18-24">18-24 years</option>
-                <option value="25-34">25-34 years</option>
-                <option value="35-44">35-44 years</option>
-                <option value="45-54">45-54 years</option>
-                <option value="55+">55+ years</option>
-              </select>
-            </div>
-
-            <div className="select-group">
-              <label className="select-label">
-                <span className="select-icon"><Home size={16} /></span>
-                Living Environment
-              </label>
-              <select
-                className="demographics-select"
-                value={demographics.urbanResidency === undefined ? "" : demographics.urbanResidency ? "urban" : "rural"}
-                onChange={(e) =>
-                  setDemographics((prev) => ({
-                    ...prev,
-                    urbanResidency: e.target.value === "urban",
-                  }))
-                }
-              >
-                <option value="">Select your environment</option>
-                <option value="urban">Urban Area</option>
-                <option value="rural">Rural Area</option>
-              </select>
-            </div>
-
-            <div className="demographics-actions">
-              <button
-                className="start-button primary-button"
-                onClick={() => setShowDemographics(false)}
-              >
-                Start Estimating
-              </button>
-              
-              <button 
-                className="skip-button secondary-button"
-                onClick={handleSkipDemographics}
-              >
-                Skip this step
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const progress = ((currentCityIndex + 1) / cities.length) * 100;
-
-  return (
-    <div className="form-container">
-      <div className="form-card estimation-card">
-        <div className="progress-container">
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${progress}%` }} />
-          </div>
-          <div className="progress-text">
-            City {currentCityIndex + 1} of {cities.length}
-          </div>
-        </div>
-
-        <div className="city-info">
-          <div className="city-icon-wrapper">
-            <MapPin size={24} />
-          </div>
-          <h2 className="city-name">{currentCity.name}</h2>
-          <p className="city-country">{currentCity.country}</p>
-        </div>
-
-        <div className="input-group">
-          <label className="input-label">
-            What's your population estimate?
-          </label>
-          <div className="input-wrapper">
-            <Users className="input-icon" size={20} />
-            <input
-              type="text"
-              value={formatPopulation(perceptions[currentCity.id] || "")}
-              onChange={(e) => handlePopulationInput(e.target.value)}
-              className={`population-input ${
-                formErrors[currentCity.id] ? "error" : ""
-              }`}
-              placeholder="Enter population estimate"
-            />
-          </div>
-          {formErrors[currentCity.id] && (
-            <p className="error-message">
-              <span className="error-icon">⚠️</span>
-              {formErrors[currentCity.id]}
-            </p>
-          )}
+      <div className="simple-form-container">
+        <div className="form-header">
+          <h2 className="form-title">Choose Your Cities</h2>
+          <p className="form-subtitle">
+            Select the cities you want to estimate. How many people do you think live in each of these places?
+          </p>
         </div>
         
-        <div className="confidence-selector">
-          <label className="confidence-label">How confident are you in your estimate?</label>
-          <div className="confidence-options">
-            {[1, 2, 3, 4, 5].map((level) => (
-              <button
-                key={level}
-                type="button"
-                className={`confidence-button ${confidence === level ? 'selected' : ''}`}
-                onClick={() => setConfidence(level)}
+        <div className="city-selection"> 
+          <div className="cities-grid">
+            {cities.map(city => (
+              <div 
+                key={city.id}
+                className={`city-card ${selectedCities.has(city.id) ? 'selected' : ''} ${estimations[city.id] ? 'estimated' : ''}`}
+                onClick={() => toggleCitySelection(city.id)}
               >
-                {level}
-              </button>
+                <h3 className="city-name">{city.name}</h3>
+                <p className="city-country">{city.country}</p>
+                
+                {selectedCities.has(city.id) && !estimations[city.id] && (
+                  <CheckCircle size={20} className="checkmark" />
+                )}
+                
+                {estimations[city.id] && (
+                  <span className="estimated-badge">Estimated</span>
+                )}
+              </div>
             ))}
           </div>
-          <div className="confidence-scale">
-            <span>Not confident</span>
-            <span>Very confident</span>
+          
+          <div className="selection-actions">
+            <button className="select-all-btn" onClick={handleSelectAllCities}>
+              {selectedCities.size === cities.length ? 'Deselect All' : 'Select All Cities'}
+            </button>
           </div>
         </div>
-
-        <div className="navigation">
-          <button
-            onClick={handlePrevious}
-            disabled={currentCityIndex === 0}
-            className="nav-button button-prev"
+        
+        <div className="form-actions">
+          
+          
+          <button 
+            className="submit-btn" 
+            disabled={selectedCities.size === 0} 
+            onClick={startEstimating}
           >
-            <ChevronLeft size={20} />
-            Previous
+            {selectedCities.size === 0 ? 'Select Cities to Continue' : `Estimate ${selectedCities.size} ${selectedCities.size === 1 ? 'City' : 'Cities'}`}
           </button>
-
-          {currentCityIndex === cities.length - 1 ? (
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !perceptions[currentCity.id]}
-              className="nav-button button-submit"
-            >
-              {submitting ? (
-                <>
-                  <span className="spinner"></span>
-                  Submitting...
-                </>
-              ) : (
-                "Submit All"
-              )}
-            </button>
-          ) : (
-            <button
-              onClick={handleNext}
-              disabled={!perceptions[currentCity.id]}
-              className="nav-button button-next"
-            >
-              Next
-              <ChevronRight size={20} />
-            </button>
-          )}
         </div>
-
-        {formErrors.submit && (
-          <p className="error-message global-error">
-            <span className="error-icon">⚠️</span>
-            {formErrors.submit}
-          </p>
-        )}
+      </div>
+    );
+  }
+  
+  // Estimation view
+  const selectedCitiesArray = Array.from(selectedCities);
+  const currentCityId = selectedCitiesArray[currentEstimatingIndex];
+  const currentCity = cities.find(city => city.id === currentCityId);
+  
+  if (!currentCity) return null;
+  
+  const progressPercentage = ((currentEstimatingIndex + 1) / selectedCitiesArray.length) * 100;
+  
+  return (
+    <div className="simple-form-container">
+      <div className="estimation-panel">
+        
+        
+        <h2 className="panel-title">
+          City {currentEstimatingIndex + 1} of {selectedCitiesArray.length}
+        </h2>
+        <div className="progress-indicator">
+          <div className="progress-bar" style={{ width: `${progressPercentage}%` }}></div>
+        </div>
+        
+        <div className="city-estimation">
+          <div className="estimation-header">
+            <div className="city-icon">
+              <MapPin size={24} strokeWidth={1.5} />
+            </div>
+            <div>
+              <h3 className="estimation-city-name">{currentCity.name}</h3>
+              <p className="estimation-country">{currentCity.country}</p>
+            </div>
+          </div>
+          
+          <div className="estimation-input-group">
+            <label className="estimation-label">
+              <Users size={18} className="label-icon" />
+              What's the population of {currentCity.name}?
+            </label>
+            <input
+              type="text"
+              className="estimation-input"
+              value={formatPopulation(estimations[currentCity.id])}
+              onChange={(e) => handlePopulationInput(currentCity.id, e.target.value)}
+              placeholder="Enter population estimate"
+            />
+            {errors[currentCity.id] && (
+              <p className="error-text">{errors[currentCity.id]}</p>
+            )}
+          </div>
+          
+          <div className="confidence-group">
+            <label className="estimation-label">
+              <Shield size={18} className="label-icon" />
+              How confident are you in your estimate?
+            </label>
+            <div className="confidence-options">
+              {[1, 2, 3, 4, 5].map(level => (
+                <button
+                  key={level}
+                  className={`confidence-btn ${(confidenceLevels[currentCity.id] || 3) === level ? 'selected' : ''}`}
+                  onClick={() => setConfidenceLevel(currentCity.id, level)}
+                >
+                  {level === 1 ? 'Not at all' :
+                   level === 2 ? 'Slightly' :
+                   level === 3 ? 'Somewhat' :
+                   level === 4 ? 'Very' :
+                   'Extremely'}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="navigation-btns">
+            <button 
+              className="nav-btn prev-btn" 
+              onClick={handlePreviousCity}
+              disabled={currentEstimatingIndex === 0}
+            >
+              <ChevronLeft size={18} />
+              Previous City
+            </button>
+            
+            {currentEstimatingIndex === selectedCitiesArray.length - 1 ? (
+              <button 
+                className="nav-btn next-btn"
+                onClick={handleSubmit}
+                disabled={!estimations[currentCity.id] || submitting}
+              >
+                {submitting ? (
+                  <>
+                    <div className="btn-spinner"></div>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    View Results
+                    <Globe size={18} />
+                  </>
+                )}
+              </button>
+            ) : (
+              <button 
+                className="nav-btn next-btn"
+                onClick={handleNextCity}
+                disabled={!estimations[currentCity.id]}
+              >
+                Next City
+                <ChevronRight size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      <div className="form-actions">
+        <button className="cancel-btn" onClick={goBackToSelection}>
+          <ChevronLeft size={16} />
+          Back to Selection
+        </button>
+        
+        
       </div>
     </div>
   );
 };
 
-export default PopulationPerceptionForm;
+export default PerceptionForm;

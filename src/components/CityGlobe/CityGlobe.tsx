@@ -3,21 +3,28 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { CityMarkers } from '../CityMarkers/CityMarkers';
+import CityRankings from '../CityRanking/CityRanking';
+import '../CityRanking/CityRanking.css';
 import './CityGlobe.css';
 import { CityInfoPanel } from './CityInfoPanel';
-
 
 interface CityGlobeProps {
   cities: CityWithPerceptions[];
   onCitySelect?: (city: CityWithPerceptions) => void;
+  hasEstimated?: boolean;
 }
 
-export const CityGlobe: React.FC<CityGlobeProps> = ({ cities, onCitySelect }) => {
+export const CityGlobe: React.FC<CityGlobeProps> = ({ 
+  cities, 
+  onCitySelect,
+  hasEstimated = false
+}) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement | null>(null);
   const [selectedCity, setSelectedCity] = useState<CityWithPerceptions | null>(null);
-  const [populationMode, setPopulationMode] = useState<'actual' | 'perceived'>('actual');
   const [isRotating, setIsRotating] = useState(false);
+  const [showRankings, setShowRankings] = useState(true);
+  const [showEstimateReminder, setShowEstimateReminder] = useState(!hasEstimated);
   
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
@@ -27,7 +34,16 @@ export const CityGlobe: React.FC<CityGlobeProps> = ({ cities, onCitySelect }) =>
   const globeRef = useRef<THREE.Mesh | null>(null);
   const labelElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const animationFrameRef = useRef<number | null>(null);
-  
+
+  useEffect(() => {
+    if (showEstimateReminder) {
+      const timer = setTimeout(() => {
+        setShowEstimateReminder(false);
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showEstimateReminder]);
 
   const handleCitySelection = useCallback((city: CityWithPerceptions | null) => {
     setSelectedCity(city);
@@ -446,9 +462,8 @@ useEffect(() => {
     labelElementsRef.current.clear();
     
     cities.forEach(city => {
-      const population = populationMode === 'actual' 
-        ? city.officialPopulation 
-        : city.perceptions.averagePerceivedPopulation;
+      // Use only the official population directly
+      const population = city.officialPopulation;
       
       const phi = (90 - city.coordinates.latitude) * (Math.PI / 180);
       const theta = (city.coordinates.longitude + 180) * (Math.PI / 180);
@@ -467,7 +482,12 @@ useEffect(() => {
       sceneRef.current?.add(cityMarker);
       cityModelsRef.current.set(city.id, cityMarker);
     });
-  }, [cities, populationMode]);
+
+    // Make sure all cities have their population stats initialized
+    CityMarkers.initializePopulationRange(
+      cities.map(city => ({ city, population: city.officialPopulation }))
+    );
+  }, [cities]);
   
   useEffect(() => {
     if (!mountRef.current || !cameraRef.current || !sceneRef.current) return;
@@ -587,7 +607,7 @@ useEffect(() => {
     };
   }, [cities, selectedCity, handleCitySelection]);
   
-  const getCityClass = (city: CityWithPerceptions) => {
+ const getCityClass = (city: CityWithPerceptions) => {
     const percentageOff = (city.perceptions.perceptionGap / city.officialPopulation) * 100;
     
     if (percentageOff > 50) return "highly-overestimated";
@@ -602,9 +622,19 @@ useEffect(() => {
     });
     setSelectedCity(null);
   }, []);
+
+  const toggleRankings = useCallback(() => {
+    setShowRankings(prev => !prev);
+  }, []);
   
   return (
     <div className="globe-wrapper">
+      {showEstimateReminder && !hasEstimated && (
+        <div className="return-to-form-message">
+          Would you like to add your own population estimates? Click "Add Your Estimates" to contribute!
+        </div>
+      )}
+      
       <div className="globe-controls">
         <button
           onClick={() => {
@@ -642,8 +672,31 @@ useEffect(() => {
           </span>
         </button>
         
-        {/* You can also add the population mode button here if needed */}
+        <button 
+          onClick={toggleRankings}
+          className="rotation-button"
+          aria-label={showRankings ? 'Hide rankings' : 'Show rankings'}
+        >
+          <span className="icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"></path>
+              <path d="M7 12h10"></path>
+              <path d="M10 18h4"></path>
+            </svg>
+          </span>
+          <span className="label-text">
+            {showRankings ? 'Hide Rankings' : 'Show Rankings'}
+          </span>
+        </button>
       </div>
+      
+      {showRankings && cities.length > 0 && (
+        <CityRankings 
+          cities={cities} 
+          onCitySelect={handleCitySelection}
+          selectedCity={selectedCity}
+        />
+      )}
       
       <div className="globe-container" ref={mountRef}>
         {/* Globe will be rendered here */}
@@ -658,4 +711,4 @@ useEffect(() => {
       )}
     </div>
   );
-};
+}
