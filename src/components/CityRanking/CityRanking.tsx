@@ -1,11 +1,11 @@
-import { CityWithPerceptions } from '@/types';
+import { City } from '@/services/firebase';
 import React, { useState } from 'react';
 import './CityRanking.css';
 
 interface CityRankingsProps {
-  cities: CityWithPerceptions[];
-  onCitySelect: (city: CityWithPerceptions) => void;
-  selectedCity: CityWithPerceptions | null;
+  cities: City[];
+  onCitySelect: (city: City) => void;
+  selectedCity: City | null;
 }
 
 const CityRankings: React.FC<CityRankingsProps> = ({ 
@@ -18,7 +18,7 @@ const CityRankings: React.FC<CityRankingsProps> = ({
   // Sort cities by population (either official or perceived)
   const sortedCities = [...cities].sort((a, b) => {
     if (showPerceived) {
-      return b.perceptions.averagePerceivedPopulation - a.perceptions.averagePerceivedPopulation;
+      return b.perceivedPopulation - a.perceivedPopulation;
     }
     return b.officialPopulation - a.officialPopulation;
   });
@@ -47,7 +47,8 @@ const CityRankings: React.FC<CityRankingsProps> = ({
       <ul className="rankings-list">
         {sortedCities.map((city, index) => {
           // Determine appropriate CSS class based on perception gap
-          const percentageOff = (city.perceptions.perceptionGap / city.officialPopulation) * 100;
+          const perceptionGap = city.perceivedPopulation - city.officialPopulation;
+          const percentageOff = (perceptionGap / city.officialPopulation) * 100;
           let perceptionClass = '';
           
           if (percentageOff > 50) perceptionClass = 'highly-overestimated';
@@ -70,7 +71,7 @@ const CityRankings: React.FC<CityRankingsProps> = ({
               </div>
               <span className="population">
                 {showPerceived 
-                  ? city.perceptions.averagePerceivedPopulation.toLocaleString()
+                  ? city.perceivedPopulation.toLocaleString()
                   : city.officialPopulation.toLocaleString()
                 }
               </span>

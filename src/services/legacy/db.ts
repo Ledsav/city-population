@@ -4,10 +4,7 @@ import { City, PopulationPerception } from "@/types";
 const DB_NAME = "cityPopulationDB";
 const DB_VERSION = 1;
 
-interface DBSchema {
-  cities: City[];
-  perceptions: PopulationPerception[];
-}
+
 
 class CityPopulationDB {
   private db: IDBDatabase | null = null;

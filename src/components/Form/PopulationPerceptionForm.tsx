@@ -1,7 +1,7 @@
-import { City } from "@/types";
 import { CheckCircle, ChevronLeft, ChevronRight, Globe, MapPin, Shield, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { db } from "../../services/db";
+import { City, firebaseService } from "../../services/firebase";
+import { inputSanitizer } from "../../services/inputSanitizer";
 import "./PopulationPerceptionForm.css";
 
 type PerceptionFormProps = {
@@ -24,8 +24,7 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
   useEffect(() => {
     const loadCities = async () => {
       try {
-        await db.init();
-        const loadedCities = await db.getCities();
+        const loadedCities = await firebaseService.getAllCities();
         setCities(loadedCities);
       } catch (error) {
         console.error("Failed to load cities:", error);
@@ -38,6 +37,11 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
   }, []);
 
   const toggleCitySelection = (cityId: string) => {
+    if (!inputSanitizer.isValidCityId(cityId)) {
+      console.error("Invalid city ID:", cityId);
+      return;
+    }
+    
     const newSelectedCities = new Set(selectedCities);
     
     if (newSelectedCities.has(cityId)) {
@@ -77,34 +81,64 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
       setCurrentEstimatingIndex(0);
     }
   };
-  
   const handlePopulationInput = (cityId: string, value: string) => {
-    const numValue = value.replace(/[^0-9]/g, "");
-    const numericValue = numValue ? parseInt(numValue) : 0;
+    if (!inputSanitizer.isValidCityId(cityId)) {
+      console.error("Invalid city ID:", cityId);
+      return;
+    }
     
-    setEstimations(prev => ({
-      ...prev,
-      [cityId]: numericValue
-    }));
+    // If the user clears the input, allow it
+    if (value === "") {
+      setEstimations(prev => {
+        const newEstimations = { ...prev };
+        delete newEstimations[cityId]; // Remove the estimation completely
+        return newEstimations;
+      });
+      return;
+    }
     
-    // Clear error if input is valid
-    if (numericValue > 0 && errors[cityId]) {
-      const newErrors = { ...errors };
-      delete newErrors[cityId];
-      setErrors(newErrors);
+    // Only run sanitizer if there's actual content to sanitize
+    if (value) {
+      // Use sanitizer to validate and process the input
+      const sanitizedValue = inputSanitizer.sanitizePopulation(value);
+      
+      if (sanitizedValue !== null) {
+        setEstimations(prev => ({
+          ...prev,
+          [cityId]: sanitizedValue
+        }));
+        
+        // Clear error if input is valid
+        if (errors[cityId]) {
+          const newErrors = { ...errors };
+          delete newErrors[cityId];
+          setErrors(newErrors);
+        }
+      } else if (value !== "0") {
+        // Only set an error if the user has entered something but it's invalid
+        setErrors({
+          ...errors,
+          [cityId]: "Please enter a valid population number (between 1 and 100 billion)"
+        });
+      }
     }
   };
-  
   const setConfidenceLevel = (cityId: string, level: number) => {
+    if (!inputSanitizer.isValidCityId(cityId)) {
+      console.error("Invalid city ID:", cityId);
+      return;
+    }
+    
+    const sanitizedLevel = inputSanitizer.sanitizeConfidenceLevel(level);
+    
     setConfidenceLevels(prev => ({
       ...prev,
-      [cityId]: level
+      [cityId]: sanitizedLevel
     }));
   };
   
   const formatPopulation = (value: number | undefined): string => {
-    if (!value) return "";
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return inputSanitizer.formatPopulation(value);
   };
   
   const validateCurrentEstimation = () => {
@@ -154,16 +188,16 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
     
     setSubmitting(true);
     try {
-      await Promise.all(
-        selectedCitiesArray.map(cityId => 
-          db.addPerception({
-            cityId,
-            estimatedPopulation: estimations[cityId],
-            confidenceLevel: confidenceLevels[cityId] || 3, // Default to medium confidence
-            timestamp: new Date().toISOString(),
-          })
-        )
-      );
+      // Prepare batch update
+      const estimates = selectedCitiesArray.map(cityId => ({
+        cityId,
+        estimatedPopulation: estimations[cityId],
+        confidenceLevel: confidenceLevels[cityId] || 3, // Default to medium confidence
+      }));
+      
+      // Update all selected cities in a batch
+      await firebaseService.updateMultipleCityEstimates(estimates);
+      
       onSubmitSuccess();
     } catch (error) {
       console.error("Failed to submit estimations:", error);
@@ -230,8 +264,6 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
         </div>
         
         <div className="form-actions">
-          
-          
           <button 
             className="submit-btn" 
             disabled={selectedCities.size === 0} 
@@ -256,8 +288,6 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
   return (
     <div className="simple-form-container">
       <div className="estimation-panel">
-        
-        
         <h2 className="panel-title">
           City {currentEstimatingIndex + 1} of {selectedCitiesArray.length}
         </h2>
@@ -287,6 +317,7 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
               value={formatPopulation(estimations[currentCity.id])}
               onChange={(e) => handlePopulationInput(currentCity.id, e.target.value)}
               placeholder="Enter population estimate"
+              aria-invalid={!!errors[currentCity.id]}
             />
             {errors[currentCity.id] && (
               <p className="error-text">{errors[currentCity.id]}</p>
@@ -362,8 +393,6 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
           <ChevronLeft size={16} />
           Back to Selection
         </button>
-        
-        
       </div>
     </div>
   );

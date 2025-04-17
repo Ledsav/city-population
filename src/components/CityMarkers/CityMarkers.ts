@@ -1,12 +1,12 @@
-import { CityWithPerceptions } from '@/types';
+import { City } from '@/services/firebase';
 import * as THREE from 'three';
 
 export class CityMarkers {
   private static minPopulation: number | null = null;
   private static maxPopulation: number | null = null;
-  private static cities: Array<{ city: CityWithPerceptions, population: number }> = [];
+  private static cities: Array<{ city: City, population: number }> = [];
 
-  static initializePopulationRange(cityData: Array<{ city: CityWithPerceptions, population: number }>) {
+  static initializePopulationRange(cityData: Array<{ city: City, population: number }>) {
     this.cities = cityData;
     
     this.minPopulation = Number.MAX_VALUE;
@@ -25,7 +25,7 @@ export class CityMarkers {
   }
 
   static createCityMarker(
-    city: CityWithPerceptions, 
+    city: City, 
     population: number, 
     position: [number, number, number]
   ): THREE.Group {
@@ -52,7 +52,9 @@ export class CityMarkers {
     
     console.log(`City: ${city.name}, Population: ${population}, Scale: ${normalizedScale}`);
     
-    const percentageOff = (city.perceptions.perceptionGap / city.officialPopulation) * 100;
+    // Determine marker color based on perception gap
+    const perceptionGap = city.perceivedPopulation - city.officialPopulation;
+    const percentageOff = (perceptionGap / city.officialPopulation) * 100;
     let markerColor;
     
     if (percentageOff > 50) {

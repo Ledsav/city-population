@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-import earthCloudsTexture from '../../assets/maps/8k_earth_clouds.jpg';
-import earthDaymapTexture from '../../assets/maps/8k_earth_daymap.jpg';
-import earthNormalMapTexture from '../../assets/maps/8k_earth_normal_map.tif';
-import earthSpecularMapTexture from '../../assets/maps/8k_earth_specular_map.tif';
+import earthCloudsTexture from '../assets/maps/8k_earth_clouds.jpg';
+import earthDaymapTexture from '../assets/maps/8k_earth_daymap.jpg';
+import earthNormalMapTexture from '../assets/maps/8k_earth_normal_map.tif';
+import earthSpecularMapTexture from '../assets/maps/8k_earth_specular_map.tif';
 
 export class TextureLoader {
   static async loadEarthTextures(): Promise<{

@@ -1,8 +1,8 @@
-import { CityWithPerceptions } from "@/types/cityWithPerceptions";
+import { City } from "@/services/firebase";
 import { X } from "lucide-react";
 
 type CityInfoPanelProps = {
-  city: CityWithPerceptions;
+  city: City;
   class: string;
   onClose: () => void;
 };
@@ -14,11 +14,9 @@ export const CityInfoPanel = ({
 }: CityInfoPanelProps) => {
   if (!city) return null;
 
-  const percentageOff = (
-    (city.perceptions.perceptionGap / city.officialPopulation) *
-    100
-  ).toFixed(1);
-  const isOverestimated = city.perceptions.perceptionGap > 0;
+  const perceptionGap = city.perceivedPopulation - city.officialPopulation;
+  const percentageOff = ((perceptionGap / city.officialPopulation) * 100).toFixed(1);
+  const isOverestimated = perceptionGap > 0;
 
   const getPerceptionCategory = () => {
     const percentage = parseFloat(percentageOff);
@@ -37,14 +35,12 @@ export const CityInfoPanel = ({
           <X size={20} />
         </button>
 
-        {}
         <div className="city-header">
           <h2 className="city-title">{city.name}</h2>
           <p className="city-subtitle">{city.country}</p>
         </div>
 
         <div className="info-grid">
-          {}
           <div className="population-stats">
             <div className="stat-group">
               <p className="stat-label">Official Population</p>
@@ -55,17 +51,16 @@ export const CityInfoPanel = ({
             <div className="stat-group">
               <p className="stat-label">Perceived Population</p>
               <p className="stat-value">
-                {city.perceptions.averagePerceivedPopulation.toLocaleString()}
+                {city.perceivedPopulation.toLocaleString()}
               </p>
             </div>
           </div>
 
-          {}
           <div className="gap-section">
             <p className="stat-label">Perception Gap</p>
             <div className="gap-value-container">
               <span className="gap-number">
-                {Math.abs(city.perceptions.perceptionGap).toLocaleString()}
+                {Math.abs(perceptionGap).toLocaleString()}
               </span>
               <span
                 className={`gap-badge ${
@@ -76,7 +71,6 @@ export const CityInfoPanel = ({
                 {percentageOff}%)
               </span>
             </div>
-            {}
             <div className="gap-visualization">
               <div className="gap-bar-container">
                 <div 
@@ -89,17 +83,21 @@ export const CityInfoPanel = ({
             </div>
           </div>
 
-          {}
           <div className="response-section">
             <p className="stat-label">Survey Responses</p>
             <p className="response-value">
-              {city.perceptions.totalPerceptions.toLocaleString()}{" "}
+              {city.numberOfEstimates.toLocaleString()}{" "}
               <span className="response-label">
-                {city.perceptions.totalPerceptions === 1
+                {city.numberOfEstimates === 1
                   ? "response"
                   : "responses"}
               </span>
             </p>
+            {city.numberOfEstimates > 0 && (
+              <p className="stat-label mt-2">
+                Avg. Confidence: {city.averageConfidenceLevel.toFixed(1)}/5
+              </p>
+            )}
           </div>
         </div>
       </div>

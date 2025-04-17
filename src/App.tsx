@@ -1,17 +1,15 @@
 // src/App.tsx
+import { City } from "@/services/firebase";
 import { Globe, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import "./App.css";
-import { CityGlobe } from "./components/CityGlobe";
+import { CityGlobe } from "./components/CityGlobe/CityGlobe";
 import PerceptionForm from "./components/Form/PopulationPerceptionForm";
-import { dbInitializer } from "./services/dbInitializer";
-import type { CityWithPerceptions } from "./types";
+import { firebaseInitializer } from "./services/firebaseInitializer";
 
 const App = () => {
   const [showGlobe, setShowGlobe] = useState(false);
-  const [citiesWithPerceptions, setCitiesWithPerceptions] = useState<
-    CityWithPerceptions[]
-  >([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasEstimated, setHasEstimated] = useState(() => {
@@ -22,7 +20,8 @@ const App = () => {
     const initializeApp = async () => {
       try {
         setLoading(true);
-        await dbInitializer.initializeDatabase();
+        // Ensure the Firebase database is initialized
+        await firebaseInitializer.ensureDatabaseInitialized();
         if (showGlobe) {
           await loadCityData();
         }
@@ -47,14 +46,14 @@ const App = () => {
   const loadCityData = async () => {
     try {
       setLoading(true);
-      const { cities } = await dbInitializer.getDatabaseState();
+      const { cities: loadedCities } = await firebaseInitializer.getDatabaseState();
 
-      if (cities.length === 0) {
+      if (loadedCities.length === 0) {
         setError("No city data available. Please try refreshing the page.");
         return;
       }
 
-      setCitiesWithPerceptions(cities);
+      setCities(loadedCities);
     } catch (err) {
       setError("Failed to load city data. Please try refreshing the page.");
       console.error("Data loading error:", err);
@@ -124,7 +123,7 @@ const App = () => {
         ) : (
           <div className="globe-view">
             <CityGlobe
-              cities={citiesWithPerceptions}
+              cities={cities}
               onCitySelect={(city) => console.log("Selected city:", city)}
               hasEstimated={hasEstimated}
             />

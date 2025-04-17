@@ -1,4 +1,4 @@
-import { CityWithPerceptions } from '@/types';
+import { City } from '@/services/firebase';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
@@ -8,9 +8,10 @@ import '../CityRanking/CityRanking.css';
 import './CityGlobe.css';
 import { CityInfoPanel } from './CityInfoPanel';
 
+
 interface CityGlobeProps {
-  cities: CityWithPerceptions[];
-  onCitySelect?: (city: CityWithPerceptions) => void;
+  cities: City[];
+  onCitySelect?: (city: City) => void;
   hasEstimated?: boolean;
 }
 
@@ -21,7 +22,7 @@ export const CityGlobe: React.FC<CityGlobeProps> = ({
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef<HTMLDivElement | null>(null);
-  const [selectedCity, setSelectedCity] = useState<CityWithPerceptions | null>(null);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [isRotating, setIsRotating] = useState(false);
   const [showRankings, setShowRankings] = useState(true);
   const [showEstimateReminder, setShowEstimateReminder] = useState(!hasEstimated);
@@ -45,271 +46,276 @@ export const CityGlobe: React.FC<CityGlobeProps> = ({
     }
   }, [showEstimateReminder]);
 
-  const handleCitySelection = useCallback((city: CityWithPerceptions | null) => {
+  const handleCitySelection = useCallback((city: City | null) => {
     setSelectedCity(city);
     if (onCitySelect && city) {
       onCitySelect(city);
     }
   }, [onCitySelect]);
   
-
-
-useEffect(() => {
-  if (!mountRef.current) return;
-  
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000510);
-  sceneRef.current = scene;
-  
-  const camera = new THREE.PerspectiveCamera(
-    50,
-    mountRef.current.clientWidth / mountRef.current.clientHeight, 
-    0.1, 
-    1000
-  );
-  camera.position.z = 5.5;
-  camera.position.y = 1.5;
-  cameraRef.current = camera;
-  
-  const renderer = new THREE.WebGLRenderer({ 
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance'
-  });
-  renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  
-  renderer.setClearColor(0x000510, 1);
-  renderer.sortObjects = false;
-  mountRef.current.appendChild(renderer.domElement);
-  rendererRef.current = renderer;
-  
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.1;
-  controls.rotateSpeed = 0.7;
-  controls.minDistance = 3.5;
-  controls.maxDistance = 8;
-  controls.autoRotate = false;
-  controls.autoRotateSpeed = 0.3;
-  controls.enablePan = false;
-  controlsRef.current = controls;
-  
-  const earthGeometry = new THREE.SphereGeometry(2, 64, 64);
-  
-  const placeholderMaterial = new THREE.MeshPhongMaterial({
-    color: 0x2244aa,
-    specular: new THREE.Color(0x444444),
-    shininess: 15,
-  });
-  
-  const earthMesh = new THREE.Mesh(earthGeometry, placeholderMaterial);
-  earthMesh.castShadow = true;
-  earthMesh.receiveShadow = true;
-  scene.add(earthMesh);
-  globeRef.current = earthMesh;
-  
-  const atmosphereGeometry = new THREE.SphereGeometry(2.1, 64, 64);
-  const atmosphereMaterial = new THREE.MeshBasicMaterial({
-    color: 0x0077ff,
-    transparent: true,
-    opacity: 0.15,
-    side: THREE.BackSide,
-  });
-  const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-  scene.add(atmosphere);
-  
-  import('./TextureLoader').then(({ TextureLoader }) => {
-    TextureLoader.loadEarthTextures().then(textures => {
-      if (earthMesh) {
-        const earthMaterial = new THREE.MeshStandardMaterial({
-          map: textures.map,
-          normalMap: textures.bumpMap,
-          normalScale: new THREE.Vector2(0.7, 0.7),
-          roughness: 0.85,
-          metalness: 0.1,
-        });
-
-        (earthMesh.material as THREE.Material) = earthMaterial;
-        if (textures.cloudMap) {
-          const cloudGeometry = new THREE.SphereGeometry(2.02, 32, 32);
-          const cloudMaterial = new THREE.MeshBasicMaterial({
-            map: textures.cloudMap,
-            transparent: true,
-            opacity: 0.4,
-            blending: THREE.AdditiveBlending,
-          });
-          
-          const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
-          scene.add(clouds);
-          
-          const animateClouds = () => {
-            clouds.rotation.y += 0.0001;
-            requestAnimationFrame(animateClouds);
-          };
-          
-          animateClouds();
-        }
-      }
+  useEffect(() => {
+    if (!mountRef.current) return;
+    
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000510);
+    sceneRef.current = scene;
+    
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      mountRef.current.clientWidth / mountRef.current.clientHeight, 
+      0.1, 
+      1000
+    );
+    camera.position.z = 5.5;
+    camera.position.y = 1.5;
+    cameraRef.current = camera;
+    
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance'
     });
-  });
-  
-  const ambientLight = new THREE.AmbientLight(0x557799, 1); 
-  scene.add(ambientLight);
-  
-  const sunLight = new THREE.DirectionalLight(0xffffff, 3);
-  sunLight.position.set(5, 3, 5);
-  sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 2048;
-  sunLight.shadow.mapSize.height = 2048;
-  sunLight.shadow.camera.near = 0.5;
-  sunLight.shadow.camera.far = 20;
-  scene.add(sunLight);
+    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    renderer.setClearColor(0x000510, 1);
+    renderer.sortObjects = false;
+    mountRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+    
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.rotateSpeed = 0.7;
+    controls.minDistance = 3.5;
+    controls.maxDistance = 8;
+    controls.autoRotate = false;
+    controls.autoRotateSpeed = 0.3;
+    controls.enablePan = false;
+    controlsRef.current = controls;
+    
+    const earthGeometry = new THREE.SphereGeometry(2, 64, 64);
+    
+    const placeholderMaterial = new THREE.MeshPhongMaterial({
+      color: 0x2244aa,
+      specular: new THREE.Color(0x444444),
+      shininess: 15,
+    });
+    
+    const earthMesh = new THREE.Mesh(earthGeometry, placeholderMaterial);
+    earthMesh.castShadow = true;
+    earthMesh.receiveShadow = true;
+    scene.add(earthMesh);
+    globeRef.current = earthMesh;
+    
+    const atmosphereGeometry = new THREE.SphereGeometry(2.1, 64, 64);
+    const atmosphereMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0077ff,
+      transparent: true,
+      opacity: 0.15,
+      side: THREE.BackSide,
+    });
+    const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+    scene.add(atmosphere);
+    
+    import('../../services/TextureLoader').then(({ TextureLoader }) => {
+      TextureLoader.loadEarthTextures().then(textures => {
+        if (earthMesh) {
+          const earthMaterial = new THREE.MeshStandardMaterial({
+            map: textures.map,
+            normalMap: textures.bumpMap,
+            normalScale: new THREE.Vector2(0.7, 0.7),
+            roughness: 0.85,
+            metalness: 0.1,
+          });
 
-  const secondaryLight = new THREE.DirectionalLight(0xffeedd, 1);
-  secondaryLight.position.set(-3, 2, -5);
-  scene.add(secondaryLight);
-
-  const rimLight = new THREE.DirectionalLight(0x8090ff, 0.7);
-  rimLight.position.set(-5, -2, -5);
-  scene.add(rimLight);
-  
-  const starsGeometry = new THREE.BufferGeometry();
-  const starsMaterial = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 0.025,
-    transparent: true,
-    opacity: 0.8,
-    sizeAttenuation: true
-  });
-  
-  const starsVertices = [];
-  for (let i = 0; i < 3000; i++) {
-    const x = THREE.MathUtils.randFloatSpread(100);
-    const y = THREE.MathUtils.randFloatSpread(100);
-    const z = THREE.MathUtils.randFloatSpread(100);
-    
-    if (Math.sqrt(x*x + y*y + z*z) > 15) {
-      starsVertices.push(x, y, z);
-    }
-  }
-  
-  starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-  const stars = new THREE.Points(starsGeometry, starsMaterial);
-  scene.add(stars);
-  
-  function createStarTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 32;
-    
-    const context = canvas.getContext('2d');
-    if (context) {
-      const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
-      gradient.addColorStop(0.5, 'rgba(128, 128, 255, 0.4)');
-      gradient.addColorStop(1, 'rgba(0, 0, 64, 0)');
-      
-      context.fillStyle = gradient;
-      context.fillRect(0, 0, 32, 32);
-    }
-    
-    const texture = new THREE.CanvasTexture(canvas);
-    return texture;
-  }
-  
-  const largeStarsMaterial = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 0.06,
-    transparent: true,
-    opacity: 0.9,
-    sizeAttenuation: true,
-    map: createStarTexture()
-  });
-  
-  const largeStarsGeometry = new THREE.BufferGeometry();
-  const largeStarsVertices = [];
-  
-  for (let i = 0; i < 100; i++) {
-    const x = THREE.MathUtils.randFloatSpread(100);
-    const y = THREE.MathUtils.randFloatSpread(100);
-    const z = THREE.MathUtils.randFloatSpread(100);
-    
-    if (Math.sqrt(x*x + y*y + z*z) > 25) {
-      largeStarsVertices.push(x, y, z);
-    }
-  }
-  
-  largeStarsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(largeStarsVertices, 3));
-  const largeStars = new THREE.Points(largeStarsGeometry, largeStarsMaterial);
-  scene.add(largeStars);
-  
-  const labelsContainer = document.createElement('div');
-  labelsContainer.className = 'city-labels-container';
-  mountRef.current.appendChild(labelsContainer);
-  labelsRef.current = labelsContainer;
-  
-  let resizeTimeout: number | null = null;
-  const handleResize = () => {
-    if (resizeTimeout) return;
-    
-    resizeTimeout = window.setTimeout(() => {
-      if (!mountRef.current || !cameraRef.current || !rendererRef.current) return;
-      
-      const width = mountRef.current.clientWidth;
-      const height = mountRef.current.clientHeight;
-      
-      cameraRef.current.aspect = width / height;
-      cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(width, height);
-      
-      resizeTimeout = null;
-    }, 100);
-  };
-  
-  window.addEventListener('resize', handleResize);
-  
-  return () => {
-    window.removeEventListener('resize', handleResize);
-    
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    if (labelsRef.current) {
-      while (labelsRef.current.firstChild) {
-        labelsRef.current.removeChild(labelsRef.current.firstChild);
-      }
-    }
-    labelElementsRef.current.clear();
-    
-    if (rendererRef.current && mountRef.current) {
-      mountRef.current.removeChild(rendererRef.current.domElement);
-      rendererRef.current.dispose();
-    }
-    
-    if (controlsRef.current) {
-      controlsRef.current.dispose();
-    }
-    
-    if (sceneRef.current) {
-      sceneRef.current.traverse((object: THREE.Object3D) => {
-        if (object instanceof THREE.Mesh) {
-          if (object.geometry) object.geometry.dispose();
-          
-          if (Array.isArray(object.material)) {
-            object.material.forEach((material: THREE.Material) => material.dispose());
-          } else if (object.material) {
-            object.material.dispose();
+          (earthMesh.material as THREE.Material) = earthMaterial;
+          if (textures.cloudMap) {
+            const cloudGeometry = new THREE.SphereGeometry(2.02, 32, 32);
+            const cloudMaterial = new THREE.MeshBasicMaterial({
+              map: textures.cloudMap,
+              transparent: true,
+              opacity: 0.4,
+              blending: THREE.AdditiveBlending,
+            });
+            
+            const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+            scene.add(clouds);
+            
+            const animateClouds = () => {
+              clouds.rotation.y += 0.0001;
+              requestAnimationFrame(animateClouds);
+            };
+            
+            animateClouds();
           }
         }
       });
+    });
+    
+    const ambientLight = new THREE.AmbientLight(0x557799, 1); 
+    scene.add(ambientLight);
+    
+    const sunLight = new THREE.DirectionalLight(0xffffff, 3);
+    sunLight.position.set(5, 3, 5);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 20;
+    scene.add(sunLight);
+
+    const secondaryLight = new THREE.DirectionalLight(0xffeedd, 1);
+    secondaryLight.position.set(-3, 2, -5);
+    scene.add(secondaryLight);
+
+    const rimLight = new THREE.DirectionalLight(0x8090ff, 0.7);
+    rimLight.position.set(-5, -2, -5);
+    scene.add(rimLight);
+    
+    // Create stars in the background
+    const starsGeometry = new THREE.BufferGeometry();
+    const starsMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.025,
+      transparent: true,
+      opacity: 0.8,
+      sizeAttenuation: true
+    });
+    
+    const starsVertices = [];
+    for (let i = 0; i < 3000; i++) {
+      const x = THREE.MathUtils.randFloatSpread(100);
+      const y = THREE.MathUtils.randFloatSpread(100);
+      const z = THREE.MathUtils.randFloatSpread(100);
+      
+      if (Math.sqrt(x*x + y*y + z*z) > 15) {
+        starsVertices.push(x, y, z);
+      }
     }
-  };
-}, []);
+    
+    starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+    const stars = new THREE.Points(starsGeometry, starsMaterial);
+    scene.add(stars);
+    
+    function createStarTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+      
+      const context = canvas.getContext('2d');
+      if (context) {
+        const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.8)');
+        gradient.addColorStop(0.5, 'rgba(128, 128, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 0, 64, 0)');
+        
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, 32, 32);
+      }
+      
+      const texture = new THREE.CanvasTexture(canvas);
+      return texture;
+    }
+    
+    const largeStarsMaterial = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.06,
+      transparent: true,
+      opacity: 0.9,
+      sizeAttenuation: true,
+      map: createStarTexture()
+    });
+    
+    const largeStarsGeometry = new THREE.BufferGeometry();
+    const largeStarsVertices = [];
+    
+    for (let i = 0; i < 100; i++) {
+      const x = THREE.MathUtils.randFloatSpread(100);
+      const y = THREE.MathUtils.randFloatSpread(100);
+      const z = THREE.MathUtils.randFloatSpread(100);
+      
+      if (Math.sqrt(x*x + y*y + z*z) > 25) {
+        largeStarsVertices.push(x, y, z);
+      }
+    }
+    
+    largeStarsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(largeStarsVertices, 3));
+    const largeStars = new THREE.Points(largeStarsGeometry, largeStarsMaterial);
+    scene.add(largeStars);
+    
+    const labelsContainer = document.createElement('div');
+    labelsContainer.className = 'city-labels-container';
+    mountRef.current.appendChild(labelsContainer);
+    labelsRef.current = labelsContainer;
+    
+    let resizeTimeout: number | null = null;
+    const handleResize = () => {
+      if (resizeTimeout) return;
+      
+      resizeTimeout = window.setTimeout(() => {
+        if (!mountRef.current || !cameraRef.current || !rendererRef.current) return;
+        
+        const width = mountRef.current.clientWidth;
+        const height = mountRef.current.clientHeight;
+        
+        cameraRef.current.aspect = width / height;
+        cameraRef.current.updateProjectionMatrix();
+        rendererRef.current.setSize(width, height);
+        
+        resizeTimeout = null;
+      }, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Store references for cleanup
+    const mountNode = mountRef.current;
+    const rendererInstance = renderer;
+    const labelsNode = labelsContainer;
+    const labelMap = labelElementsRef.current;
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      
+      if (labelsNode) {
+        while (labelsNode.firstChild) {
+          labelsNode.removeChild(labelsNode.firstChild);
+        }
+      }
+      labelMap.clear();
+      
+      if (rendererInstance && mountNode) {
+        mountNode.removeChild(rendererInstance.domElement);
+        rendererInstance.dispose();
+      }
+      
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
+      
+      if (scene) {
+        scene.traverse((object: THREE.Object3D) => {
+          if (object instanceof THREE.Mesh) {
+            if (object.geometry) object.geometry.dispose();
+            
+            if (Array.isArray(object.material)) {
+              object.material.forEach((material: THREE.Material) => material.dispose());
+            } else if (object.material) {
+              object.material.dispose();
+            }
+          }
+        });
+      }
+    };
+  }, []);
   
   useEffect(() => {
     if (!sceneRef.current || !cameraRef.current || !rendererRef.current) return;
@@ -318,25 +324,8 @@ useEffect(() => {
     const targetFPS = 30;
     const frameInterval = 1000 / targetFPS;
     
-    const animate = (timestamp: number) => {
-      animationFrameRef.current = requestAnimationFrame(animate);
-      
-      const deltaTime = timestamp - lastRenderTime;
-      if (deltaTime < frameInterval) return;
-      
-      lastRenderTime = timestamp - (deltaTime % frameInterval);
-      
-      if (controlsRef.current) {
-        controlsRef.current.update();
-      }
-      
-      updateMarkerVisibility();
-      updateCityLabels();
-      
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-      }
-    };
+    // Store references for cleanup
+    const labelMap = labelElementsRef.current;
     
     const updateMarkerVisibility = () => {
       if (!cameraRef.current) return;
@@ -362,7 +351,7 @@ useEffect(() => {
       
       cityModelsRef.current.forEach((cityGroup, cityId) => {
         if (!cityGroup.visible) {
-          const labelElement = labelElementsRef.current.get(cityId);
+          const labelElement = labelMap.get(cityId);
           if (labelElement) {
             labelElement.style.opacity = '0';
           }
@@ -390,17 +379,18 @@ useEffect(() => {
             const x = (vector.x * 0.5 + 0.5) * rendererRef.current.domElement.clientWidth;
             const y = (-(vector.y * 0.5) + 0.5) * rendererRef.current.domElement.clientHeight;
             
-            let labelElement = labelElementsRef.current.get(cityId);
+            let labelElement = labelMap.get(cityId);
             if (!labelElement) {
               labelElement = document.createElement('div');
               labelElement.style.position = 'absolute';
               labelElement.style.pointerEvents = 'none';
               labelsRef.current.appendChild(labelElement);
-              labelElementsRef.current.set(cityId, labelElement);
+              labelMap.set(cityId, labelElement);
               
               const city = cities.find(c => c.id === cityId);
               if (city) {
-                const percentageOff = (city.perceptions.perceptionGap / city.officialPopulation) * 100;
+                const perceptionGap = city.perceivedPopulation - city.officialPopulation;
+                const percentageOff = (perceptionGap / city.officialPopulation) * 100;
                 let labelClass = 'city-label';
                 
                 if (percentageOff > 50) {
@@ -427,13 +417,33 @@ useEffect(() => {
             
             labelElement.style.opacity = '1';
           } else {
-            const labelElement = labelElementsRef.current.get(cityId);
+            const labelElement = labelMap.get(cityId);
             if (labelElement) {
               labelElement.style.opacity = '0';
             }
           }
         }
       });
+    };
+    
+    const animate = (timestamp: number) => {
+      animationFrameRef.current = requestAnimationFrame(animate);
+      
+      const deltaTime = timestamp - lastRenderTime;
+      if (deltaTime < frameInterval) return;
+      
+      lastRenderTime = timestamp - (deltaTime % frameInterval);
+      
+      if (controlsRef.current) {
+        controlsRef.current.update();
+      }
+      
+      updateMarkerVisibility();
+      updateCityLabels();
+      
+      if (rendererRef.current && sceneRef.current && cameraRef.current) {
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
+      }
     };
     
     animate(0);
@@ -454,12 +464,16 @@ useEffect(() => {
     });
     cityModelsRef.current.clear();
     
-    if (labelsRef.current) {
-      while (labelsRef.current.firstChild) {
-        labelsRef.current.removeChild(labelsRef.current.firstChild);
+    // Store references for cleanup
+    const labelsNode = labelsRef.current;
+    const labelMap = labelElementsRef.current;
+    
+    if (labelsNode) {
+      while (labelsNode.firstChild) {
+        labelsNode.removeChild(labelsNode.firstChild);
       }
     }
-    labelElementsRef.current.clear();
+    labelMap.clear();
     
     cities.forEach(city => {
       // Use only the official population directly
@@ -495,10 +509,14 @@ useEffect(() => {
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     
+    // Store references for cleanup
+    const mountNode = mountRef.current;
+    const labelMap = labelElementsRef.current;
+    
     const handleClick = (event: MouseEvent) => {
-      const rect = mountRef.current!.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / mountRef.current!.clientWidth) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / mountRef.current!.clientHeight) * 2 + 1;
+      const rect = mountNode.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / mountNode.clientWidth) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / mountNode.clientHeight) * 2 + 1;
       
       raycaster.setFromCamera(mouse, cameraRef.current!);
       
@@ -515,7 +533,7 @@ useEffect(() => {
         if (selectedCity) {
           handleCitySelection(null);
           
-          labelElementsRef.current.forEach((labelElement) => {
+          labelMap.forEach((labelElement) => {
             labelElement.className = labelElement.className.replace(' selected', '');
           });
         }
@@ -534,7 +552,7 @@ useEffect(() => {
           const city = cities.find(c => c.id === cityId);
           
           if (city) {
-            labelElementsRef.current.forEach((labelElement, id) => {
+            labelMap.forEach((labelElement, id) => {
               labelElement.className = labelElement.className.replace(' selected', '');
               
               if (id === cityId && (!selectedCity || selectedCity.id !== cityId)) {
@@ -600,15 +618,16 @@ useEffect(() => {
       animateCamera();
     };
     
-    mountRef.current.addEventListener('click', handleClick);
+    mountNode.addEventListener('click', handleClick);
     
     return () => {
-      mountRef.current?.removeEventListener('click', handleClick);
+      mountNode.removeEventListener('click', handleClick);
     };
   }, [cities, selectedCity, handleCitySelection]);
   
- const getCityClass = (city: CityWithPerceptions) => {
-    const percentageOff = (city.perceptions.perceptionGap / city.officialPopulation) * 100;
+  const getCityClass = (city: City) => {
+    const perceptionGap = city.perceivedPopulation - city.officialPopulation;
+    const percentageOff = (perceptionGap / city.officialPopulation) * 100;
     
     if (percentageOff > 50) return "highly-overestimated";
     if (percentageOff > 0) return "slightly-overestimated";
@@ -617,7 +636,9 @@ useEffect(() => {
   };
   
   const handleCloseInfoPanel = useCallback(() => {
-    labelElementsRef.current.forEach((labelElement) => {
+    // Store reference to avoid the React hooks warning
+    const labelMap = labelElementsRef.current;
+    labelMap.forEach((labelElement) => {
       labelElement.className = labelElement.className.replace(' selected', '');
     });
     setSelectedCity(null);
