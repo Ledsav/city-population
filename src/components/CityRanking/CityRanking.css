@@ -139,6 +139,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9) !important ;
   }
   
   .city-country {

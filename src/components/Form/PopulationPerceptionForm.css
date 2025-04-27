@@ -131,7 +131,7 @@
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
-.city-name {
+.city-name-form {
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -223,7 +223,7 @@
   box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
 }
 
-.estimation-city-name {
+.estimation-city-name-form {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -533,7 +533,7 @@
     height: 3.5rem;
   }
   
-  .estimation-city-name {
+  .estimation-city-name-form {
     font-size: 1.3rem;
   }
   
@@ -572,7 +572,7 @@
     height: 3rem;
   }
   
-  .estimation-city-name {
+  .estimation-city-name-form {
     font-size: 1.2rem;
   }
   

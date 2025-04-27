@@ -4,6 +4,7 @@ import { Globe, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import "./App.css";
 import { CityGlobe } from "./components/CityGlobe/CityGlobe";
+import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
 import PerceptionForm from "./components/Form/PopulationPerceptionForm";
 import { firebaseInitializer } from "./services/firebaseInitializer";
 
@@ -85,6 +86,7 @@ const App = () => {
 
   return (
     <div className={`App ${showGlobe ? 'globe-mode' : ''}`}>
+      <ErrorBoundary>
       {!showGlobe && (
         <header className="app-header">
           <h1 className="app-title">How Big Are Cities?</h1>
@@ -139,6 +141,7 @@ const App = () => {
           </div>
         )}
       </main>
+      </ErrorBoundary>
     </div>
   );
 };

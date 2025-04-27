@@ -242,7 +242,7 @@ const PerceptionForm: React.FC<PerceptionFormProps> = ({
                 className={`city-card ${selectedCities.has(city.id) ? 'selected' : ''} ${estimations[city.id] ? 'estimated' : ''}`}
                 onClick={() => toggleCitySelection(city.id)}
               >
-                <h3 className="city-name">{city.name}</h3>
+                <h3 className="city-name-form">{city.name}</h3>
                 <p className="city-country">{city.country}</p>
                 
                 {selectedCities.has(city.id) && !estimations[city.id] && (
