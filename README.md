@@ -123,11 +123,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgements
-
-- City population data sourced from [trusted statistical sources]
 - Earth textures provided by [NASA's Visible Earth project]
 - 3D globe implementation inspired by [Three.js examples]
-- UI/UX design inspiration from [design sources]
+
 
 ---
 
