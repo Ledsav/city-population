@@ -4,7 +4,7 @@
 
 PopGlobe is an interactive web application that explores the fascinating disconnect between perceived and actual city populations. This project visualizes how people estimate city sizes compared to official statistics, revealing our collective biases about urban areas around the world.
 
-[Live Demo](#) | [Video Tour](#)
+[Live Demo](https://popglobe.netlify.app/) 
 
 ## Features
 
