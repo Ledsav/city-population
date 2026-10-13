@@ -6,12 +6,12 @@ import {
   Firestore,
   getDocs,
   getFirestore,
+  runTransaction,
   setDoc,
-  updateDoc
-} from 'firebase/firestore';
+} from 'firebase/firestore/lite';
 import { firebaseConfig } from '../config/firebaseConfig';
+import { seedCities } from '../data/seedCities';
 
-// City type with simplified structure
 export interface City {
   id: string;
   name: string;
@@ -26,177 +26,96 @@ export interface City {
   averageConfidenceLevel: number;
 }
 
+export interface Estimate {
+  cityId: string;
+  estimatedPopulation: number;
+  confidenceLevel: number;
+}
+
+/** Running average: ((avg * n) + value) / (n + 1) */
+export const applyEstimate = (city: City, estimate: Estimate): City => {
+  const n = city.numberOfEstimates;
+  const next = n + 1;
+  return {
+    ...city,
+    numberOfEstimates: next,
+    perceivedPopulation: (city.perceivedPopulation * n + estimate.estimatedPopulation) / next,
+    averageConfidenceLevel: (city.averageConfidenceLevel * n + estimate.confidenceLevel) / next,
+  };
+};
+
+/**
+ * Firestore Lite keeps the bundle small (no realtime listeners needed).
+ * Without a Firebase config (e.g. local dev) the service runs on in-memory seed data.
+ */
 export class FirebaseService {
-  private app;
-  private db: Firestore;
-  private cachedCities: City[] | null = null;
+  private db: Firestore | null = null;
+  private cities: Promise<City[]> | null = null;
+  readonly isDemo = !firebaseConfig.projectId;
 
-  constructor() {
-    try {
-      // Log Firebase config for debugging (masking sensitive info)
-      console.log("Initializing Firebase with config:", {
-        projectId: firebaseConfig.projectId,
-        authDomain: firebaseConfig.authDomain,
-        // Don't log API key or other sensitive info
+  private getDb(): Firestore {
+    if (!this.db) this.db = getFirestore(initializeApp(firebaseConfig));
+    return this.db;
+  }
+
+  /** Fetches all cities once, seeding an empty database; concurrent callers share one request. */
+  getAllCities(): Promise<City[]> {
+    if (!this.cities) {
+      this.cities = this.fetchCities().catch((error) => {
+        this.cities = null;
+        throw error;
       });
-
-      // Initialize Firebase
-      this.app = initializeApp(firebaseConfig);
-      this.db = getFirestore(this.app);
-      
-      console.log("Firebase initialized successfully");
-    } catch (error) {
-      console.error("Failed to initialize Firebase:", error);
-      // In a real app, you might want to show a user-friendly error or retry
-      throw new Error("Firebase initialization failed. Check your configuration.");
     }
+    return this.cities;
+  }
+
+  private async fetchCities(): Promise<City[]> {
+    if (this.isDemo) return seedCities.map((city) => ({ ...city }));
+
+    const db = this.getDb();
+    const snapshot = await getDocs(collection(db, 'cities'));
+    if (snapshot.empty) {
+      await Promise.all(seedCities.map((city) => setDoc(doc(db, 'cities', city.id), city)));
+      return seedCities.map((city) => ({ ...city }));
+    }
+    return snapshot.docs.map((d) => ({ ...(d.data() as City), id: d.id }));
   }
 
   /**
-   * Fetches all cities from Firestore
-   * Using caching to minimize db calls
+   * Applies every estimate in parallel. Each city is updated in its own transaction so
+   * concurrent visitors can't overwrite each other's contributions to the average.
    */
-  async getAllCities(): Promise<City[]> {
-    // Return cached cities if available
-    if (this.cachedCities) {
-      console.log("Returning cached cities data");
-      return this.cachedCities;
+  async submitEstimates(estimates: Estimate[]): Promise<City[]> {
+    const current = await this.getAllCities();
+    let updated: City[];
+
+    if (this.isDemo) {
+      updated = estimates.map((e) => applyEstimate(current.find((c) => c.id === e.cityId)!, e));
+    } else {
+      const db = this.getDb();
+      updated = await Promise.all(
+        estimates.map((estimate) =>
+          runTransaction(db, async (tx) => {
+            const ref = doc(db, 'cities', estimate.cityId);
+            const snap = await tx.get(ref);
+            if (!snap.exists()) throw new Error(`City ${estimate.cityId} not found`);
+            const next = applyEstimate({ ...(snap.data() as City), id: snap.id }, estimate);
+            tx.update(ref, {
+              perceivedPopulation: next.perceivedPopulation,
+              numberOfEstimates: next.numberOfEstimates,
+              averageConfidenceLevel: next.averageConfidenceLevel,
+            });
+            return next;
+          })
+        )
+      );
     }
 
-    try {
-      console.log("Fetching cities from Firestore...");
-      const citiesCollection = collection(this.db, 'cities');
-      const citySnapshot = await getDocs(citiesCollection);
-      
-      if (citySnapshot.empty) {
-        console.log("No cities found in database");
-        return [];
-      }
-      
-      const cityList = citySnapshot.docs.map(doc => {
-        const data = doc.data() as City;
-        // Ensure the document ID is used as the city ID
-        return { ...data, id: doc.id };
-      });
-      
-      console.log(`Fetched ${cityList.length} cities from Firestore`);
-      
-      // Cache the result
-      this.cachedCities = cityList;
-      
-      return cityList;
-    } catch (error) {
-      console.error('Error fetching cities:', error);
-      throw new Error('Failed to fetch cities from the database');
-    }
-  }
-
-  /**
-   * Updates city with new estimate
-   * Recalculates the averages using the formula:
-   * newAverage = ((oldAverage * oldCount) + newValue) / (oldCount + 1)
-   */
-  async updateCityEstimate(cityId: string, estimatedPopulation: number, confidenceLevel: number): Promise<void> {
-    try {
-      // Fetch latest data for this city to ensure accuracy
-      const allCities = await this.getAllCities();
-      const city = allCities.find(c => c.id === cityId);
-      
-      if (!city) {
-        throw new Error(`City with ID ${cityId} not found`);
-      }
-
-      // Calculate new perceived population average
-      const newNumberOfEstimates = city.numberOfEstimates + 1;
-      const newPerceivedPopulation = (
-        (city.perceivedPopulation * city.numberOfEstimates) + estimatedPopulation
-      ) / newNumberOfEstimates;
-
-      // Calculate new confidence level average
-      const newAverageConfidenceLevel = (
-        (city.averageConfidenceLevel * city.numberOfEstimates) + confidenceLevel
-      ) / newNumberOfEstimates;
-
-      // Update the document in Firestore
-      const cityRef = doc(this.db, 'cities', cityId);
-      await updateDoc(cityRef, {
-        perceivedPopulation: newPerceivedPopulation,
-        numberOfEstimates: newNumberOfEstimates,
-        averageConfidenceLevel: newAverageConfidenceLevel
-      });
-
-      // Update the cached version too
-      if (this.cachedCities) {
-        const cachedCityIndex = this.cachedCities.findIndex(c => c.id === cityId);
-        if (cachedCityIndex >= 0) {
-          this.cachedCities[cachedCityIndex] = {
-            ...city,
-            perceivedPopulation: newPerceivedPopulation,
-            numberOfEstimates: newNumberOfEstimates,
-            averageConfidenceLevel: newAverageConfidenceLevel
-          };
-        }
-      }
-    } catch (error) {
-      console.error('Error updating city estimate:', error);
-      throw new Error('Failed to update city estimate');
-    }
-  }
-
-  /**
-   * Updates multiple cities with new estimates in a batch
-   */
-  async updateMultipleCityEstimates(estimates: Array<{
-    cityId: string;
-    estimatedPopulation: number;
-    confidenceLevel: number;
-  }>): Promise<void> {
-    try {
-      // Process each estimate sequentially
-      for (const estimate of estimates) {
-        await this.updateCityEstimate(
-          estimate.cityId,
-          estimate.estimatedPopulation,
-          estimate.confidenceLevel
-        );
-      }
-      
-      // Invalidate cache after batch update
-      this.cachedCities = null;
-    } catch (error) {
-      console.error('Error updating multiple city estimates:', error);
-      throw new Error('Failed to update city estimates in batch');
-    }
-  }
-
-  /**
-   * Initializes the database with seed data
-   * This should only be used for first-time setup or testing
-   */
-  async seedDatabase(initialCities: City[]): Promise<void> {
-    try {
-      // Add each city to the database
-      for (const city of initialCities) {
-        await setDoc(doc(this.db, 'cities', city.id), city);
-      }
-      
-      // Invalidate cache after seeding
-      this.cachedCities = null;
-      
-      console.log('Database successfully seeded with initial data');
-    } catch (error) {
-      console.error('Error seeding database:', error);
-      throw new Error('Failed to seed database with initial data');
-    }
-  }
-
-  /**
-   * Clears the cache to force a fresh fetch on next getAllCities call
-   */
-  clearCache(): void {
-    this.cachedCities = null;
+    const byId = new Map(updated.map((c) => [c.id, c]));
+    const merged = current.map((c) => byId.get(c.id) ?? c);
+    this.cities = Promise.resolve(merged);
+    return merged;
   }
 }
 
-// Export a singleton instance
 export const firebaseService = new FirebaseService();

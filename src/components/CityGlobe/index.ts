@@ -1,2 +1,1 @@
-// src/components/CityGlobe/index.ts
-export { CityGlobe } from './CityGlobe';
+export { default as CityGlobe } from './CityGlobe';

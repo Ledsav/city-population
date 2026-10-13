@@ -1,13 +1,184 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+:root {
+  /* Night-side atlas: navy sky, sodium-lamp amber for city lights,
+     rose for "guessed too high", sky blue for "guessed too low". */
+  --ink: #0b1b30;
+  --ink-raised: #12263f;
+  --ink-sunken: #071324;
+  --line: rgba(164, 196, 232, 0.16);
+  --line-strong: rgba(164, 196, 232, 0.32);
+  --paper: #e9f0f7;
+  --muted: #93a7bf;
+  --lamp: #ffb547;
+  --lamp-ink: #2a1a00;
+  --over: #ff5c7a;
+  --over-soft: #ffa3b4;
+  --under: #3fb4ff;
+  --under-soft: #9ad8ff;
+  --danger: #ff8f8f;
+
+  --font: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --gutter: clamp(16px, 4vw, 48px);
+
+  color-scheme: dark;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--lamp);
+  outline-offset: 3px;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 1.4rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: nowrap;
+  user-select: none;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.12s var(--ease-out);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.btn-primary {
+  background: var(--lamp);
+  color: var(--lamp-ink);
+}
+
+.btn-quiet {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--paper);
+}
+
+.btn-text {
+  min-height: 40px;
+  padding: 0 0.6rem;
+  background: none;
+  color: var(--muted);
+}
+
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) {
+    background: #ffc46e;
+  }
+  .btn-quiet:hover:not(:disabled) {
+    background: rgba(164, 196, 232, 0.08);
+    border-color: var(--paper);
+  }
+  .btn-text:hover {
+    color: var(--paper);
+  }
+}
+
+/* ---------- Loading & errors ---------- */
+
+.screen-center {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  padding: var(--gutter);
+  text-align: center;
+}
+
+.loading-mark {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.4;
+    transform: scale(0.94);
+  }
+}
+
+.error-card {
+  max-width: 28rem;
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+
+.error-card p {
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

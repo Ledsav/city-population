@@ -1,0 +1,148 @@
+.intro {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 0 var(--gutter);
+  background:
+    radial-gradient(60rem 40rem at 85% 60%, rgba(63, 180, 255, 0.1), transparent 70%),
+    var(--ink);
+}
+
+.intro-bar {
+  position: relative;
+  z-index: 1;
+  padding: 1.25rem 0;
+}
+
+.intro-main {
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  max-width: 40rem;
+  padding: 2rem 0 6rem;
+}
+
+.intro-title {
+  font-size: clamp(2.6rem, 6.4vw, 5.4rem);
+  font-weight: 750;
+  font-variation-settings: 'opsz' 96, 'wdth' 90;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  min-height: 3em; /* three lines, so the page doesn't jump as names change */
+}
+
+@media (min-width: 1100px) {
+  .intro-title {
+    min-height: 2em;
+  }
+}
+
+.intro-city {
+  display: inline-block;
+  animation: city-in 0.5s var(--ease-out);
+}
+
+@keyframes city-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.25em);
+    filter: blur(4px);
+  }
+}
+
+.intro-lede {
+  margin-top: 1.5rem;
+  max-width: 32rem;
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2.25rem;
+}
+
+.intro-count {
+  margin-top: 1.75rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.intro-count .num {
+  color: var(--lamp);
+  font-weight: 650;
+}
+
+/* A cheap stand-in for the 3D globe: the texture slides inside a shaded circle (transform only). */
+.intro-globe {
+  position: absolute;
+  right: calc(-0.18 * min(78vh, 52vw));
+  top: 50%;
+  width: min(78vh, 52vw);
+  aspect-ratio: 1;
+  transform: translateY(-46%);
+  border-radius: 50%;
+  overflow: hidden;
+  background: #0d2a4a;
+  box-shadow:
+    0 0 0 1px rgba(154, 216, 255, 0.18),
+    0 0 80px 10px rgba(63, 180, 255, 0.18);
+}
+
+.intro-globe::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.16), transparent 42%),
+    radial-gradient(circle at 50% 50%, transparent 52%, rgba(7, 19, 36, 0.75) 72%, var(--ink-sunken) 100%);
+}
+
+.intro-globe-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 400%;
+  background: var(--map) repeat-x 0 0 / 50% 100%;
+  animation: spin-map 90s linear infinite;
+  will-change: transform;
+}
+
+@keyframes spin-map {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 760px) {
+  .intro-main {
+    align-self: start;
+    padding-top: 1.5rem;
+  }
+  .intro-globe {
+    width: 120vw;
+    top: auto;
+    bottom: -62vw;
+    right: -10vw;
+    transform: none;
+    opacity: 0.85;
+  }
+  .intro-actions .btn {
+    flex: 1 1 12rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-globe-map {
+    animation: none;
+  }
+}

@@ -1,148 +1,98 @@
-// src/App.tsx
-import { City } from "@/services/firebase";
-import { Globe, Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
-import "./App.css";
-import { CityGlobe } from "./components/CityGlobe/CityGlobe";
-import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
-import PerceptionForm from "./components/Form/PopulationPerceptionForm";
-import { firebaseInitializer } from "./services/firebaseInitializer";
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import { GuessFlow } from './components/Guess/GuessFlow';
+import { Intro } from './components/Intro/Intro';
+import { LogoMark } from './components/Logo/Logo';
+import { loadMyGuesses, saveMyGuesses } from './lib/perception';
+import { City, Estimate, firebaseService } from './services/firebase';
+
+// three.js only downloads when someone actually opens the globe.
+const loadGlobe = () => import('./components/CityGlobe/CityGlobe');
+const CityGlobe = lazy(loadGlobe);
+
+type Screen = 'intro' | 'guess' | 'globe';
+
+const Loading = ({ label }: { label: string }) => (
+  <div className="screen-center" role="status">
+    <span className="loading-mark">
+      <LogoMark size={56} />
+    </span>
+    <p className="visually-hidden">{label}</p>
+  </div>
+);
 
 const App = () => {
-  const [showGlobe, setShowGlobe] = useState(false);
-  const [cities, setCities] = useState<City[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [screen, setScreen] = useState<Screen>('intro');
+  const [cities, setCities] = useState<City[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [hasEstimated, setHasEstimated] = useState(() => {
-    return localStorage.getItem('hasEstimated') === 'true';
-  });
+  const [myGuesses, setMyGuesses] = useState<Record<string, number>>(loadMyGuesses);
+  const [focusCityId, setFocusCityId] = useState<string | null>(null);
 
+  const load = useCallback(() => {
+    setError(null);
+    firebaseService
+      .getAllCities()
+      .then(setCities)
+      .catch(() => setError("We couldn't reach the city database. Check your connection and try again."));
+  }, []);
+
+  useEffect(load, [load]);
+
+  // Warm the globe chunk while the visitor is still reading or guessing.
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        setLoading(true);
-        // Ensure the Firebase database is initialized
-        await firebaseInitializer.ensureDatabaseInitialized();
-        if (showGlobe) {
-          await loadCityData();
-        }
-      } catch (err) {
-        setError(
-          "Failed to initialize the application. Please refresh the page."
-        );
-        console.error("Initialization error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const id = window.setTimeout(loadGlobe, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
 
-    initializeApp();
-  }, [showGlobe]);
-
-  // Update localStorage when hasEstimated changes
-  useEffect(() => {
-    localStorage.setItem('hasEstimated', hasEstimated.toString());
-  }, [hasEstimated]);
-
-  const loadCityData = async () => {
-    try {
-      setLoading(true);
-      const { cities: loadedCities } = await firebaseInitializer.getDatabaseState();
-
-      if (loadedCities.length === 0) {
-        setError("No city data available. Please try refreshing the page.");
-        return;
-      }
-
-      setCities(loadedCities);
-    } catch (err) {
-      setError("Failed to load city data. Please try refreshing the page.");
-      console.error("Data loading error:", err);
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = async (estimates: Estimate[]) => {
+    const updated = await firebaseService.submitEstimates(estimates);
+    const guesses = Object.fromEntries(estimates.map((e) => [e.cityId, e.estimatedPopulation]));
+    saveMyGuesses(guesses);
+    setMyGuesses((prev) => ({ ...prev, ...guesses }));
+    setCities(updated);
+    setFocusCityId(estimates[0]?.cityId ?? null);
+    setScreen('globe');
   };
 
-  const handleFormSubmitted = async () => {
-    try {
-      await loadCityData();
-      setHasEstimated(true);
-      setShowGlobe(true);
-    } catch (err) {
-      setError("Failed to load updated city data. Please try again.");
-      console.error("Form submission error:", err);
-    }
-  };
+  if (error) {
+    return (
+      <div className="screen-center">
+        <div className="error-card" role="alert">
+          <LogoMark size={48} />
+          <p>{error}</p>
+          <button className="btn btn-primary" onClick={load}>
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const skipToGlobe = async () => {
-    try {
-      await loadCityData();
-      setShowGlobe(true);
-    } catch (err) {
-      setError("Failed to load city data. Please try again.");
-      console.error("Skip to globe error:", err);
-    }
-  };
+  if (!cities) return <Loading label="Loading cities" />;
 
   return (
-    <div className={`App ${showGlobe ? 'globe-mode' : ''}`}>
-      <ErrorBoundary>
-      {!showGlobe && (
-        <header className="app-header">
-          <h1 className="app-title">How Big Are Cities?</h1>
-          <p className="app-description">
-            PopGlobe is an interactive tool about population perception. Estimate the population of
-            cities around the world and see how your perceptions compare to reality and to those of others.
-          </p>
-          <div className="app-icon">
-            <div className="globe-icon-wrapper">
-              <span role="img" aria-label="Globe">🌍</span>
-              <Sparkles className="sparkles" size={20} />
-            </div>
-          </div>
-          <div className="skip-container">
-            <button onClick={skipToGlobe} className="skip-to-globe">
-              <Globe size={16} />
-              <span>Skip to Globe View</span>
-            </button>
-          </div>
-        </header>
+    <ErrorBoundary>
+      {screen === 'intro' && (
+        <Intro
+          cities={cities}
+          onStart={() => setScreen('guess')}
+          onExplore={() => setScreen('globe')}
+        />
       )}
-
-      <main className="app-content fullscreen">
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p className="loading-text">Loading world data...</p>
-          </div>
-        ) : error ? (
-          <div className="error-message">
-            <span>⚠️</span>
-            <p>{error}</p>
-          </div>
-        ) : !showGlobe ? (
-          <PerceptionForm onSubmitSuccess={handleFormSubmitted} />
-        ) : (
-          <div className="globe-view">
-            <CityGlobe
-              cities={cities}
-              onCitySelect={(city) => console.log("Selected city:", city)}
-              hasEstimated={hasEstimated}
-            />
-            <div className="button-container">
-              <button
-                onClick={() => setShowGlobe(false)}
-                className={`submit-new-estimates ${!hasEstimated ? 'emphasize' : ''}`}
-              >
-                <Globe size={18} />
-                <span>{hasEstimated ? "Estimate More Cities" : "Add Your Estimates"}</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </main>
-      </ErrorBoundary>
-    </div>
+      {screen === 'guess' && (
+        <GuessFlow cities={cities} onSubmit={handleSubmit} onCancel={() => setScreen('intro')} />
+      )}
+      {screen === 'globe' && (
+        <Suspense fallback={<Loading label="Loading the globe" />}>
+          <CityGlobe
+            cities={cities}
+            myGuesses={myGuesses}
+            initialCityId={focusCityId}
+            onGuessMore={() => setScreen('guess')}
+          />
+        </Suspense>
+      )}
+    </ErrorBoundary>
   );
 };
 
