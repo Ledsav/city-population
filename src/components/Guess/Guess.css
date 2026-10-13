@@ -1,0 +1,301 @@
+.guess {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.guess-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem var(--gutter);
+}
+
+.guess-bar .btn-text {
+  margin-left: -0.6rem;
+}
+
+.guess-progress-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.guess-progress {
+  height: 2px;
+  margin: 0 var(--gutter);
+  background: var(--line);
+}
+
+.guess-progress span {
+  display: block;
+  height: 100%;
+  background: var(--lamp);
+  transform-origin: left;
+  transition: transform 0.35s var(--ease-out);
+}
+
+.guess-main {
+  flex: 1;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 2rem var(--gutter) 3rem;
+}
+
+.guess-main--single {
+  max-width: 36rem;
+  padding-top: clamp(2rem, 9vh, 6rem);
+}
+
+.guess-title {
+  font-size: clamp(2rem, 4.4vw, 3.25rem);
+  font-weight: 720;
+  font-variation-settings: 'opsz' 72, 'wdth' 92;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.guess-lede {
+  margin-top: 0.75rem;
+  color: var(--muted);
+  font-size: 1.1rem;
+}
+
+/* ---------- Picking cities ---------- */
+
+.pick-grid {
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: 0.5rem;
+}
+
+.pick-card {
+  position: relative;
+  width: 100%;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.9rem 2.75rem 0.95rem 1rem;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.pick-name {
+  font-weight: 620;
+  font-size: 1.05rem;
+}
+
+.pick-country {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.pick-check {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: -0.625rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  color: var(--lamp-ink);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.pick-card.is-on {
+  border-color: var(--lamp);
+  background: rgba(255, 181, 71, 0.08);
+}
+
+.pick-card.is-on .pick-check {
+  background: var(--lamp);
+  border-color: var(--lamp);
+}
+
+@media (hover: hover) {
+  .pick-card:hover {
+    border-color: var(--line-strong);
+    background: rgba(164, 196, 232, 0.05);
+  }
+  .pick-card.is-on:hover {
+    border-color: var(--lamp);
+  }
+}
+
+.guess-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom));
+  background: rgba(11, 27, 48, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- Guessing one city ---------- */
+
+.city-guess {
+  display: grid;
+  gap: 2rem;
+}
+
+.city-guess-country {
+  color: var(--muted);
+  font-size: 1.05rem;
+  margin-bottom: -1.75rem;
+}
+
+.city-guess-name {
+  font-size: clamp(2.75rem, 9vw, 4.75rem);
+  font-weight: 760;
+  font-variation-settings: 'opsz' 96, 'wdth' 88;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+  animation: rise 0.4s var(--ease-out);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.field {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.field-label {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.population-input {
+  width: 100%;
+  padding: 0.35rem 0 0.5rem;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0;
+  font-size: clamp(2rem, 7vw, 3rem);
+  font-weight: 650;
+  font-variation-settings: 'opsz' 60;
+  letter-spacing: -0.02em;
+  transition: border-color 0.15s;
+}
+
+.population-input::placeholder {
+  color: rgba(147, 167, 191, 0.45);
+  font-weight: 400;
+  font-size: 0.6em;
+}
+
+.population-input:focus {
+  outline: none;
+  border-color: var(--lamp);
+}
+
+.population-input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.field-hint {
+  color: var(--muted);
+  font-size: 0.95rem;
+  min-height: 1.5em;
+}
+
+.field-hint.is-error {
+  color: var(--danger);
+}
+
+.confidence {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.confidence legend {
+  padding: 0;
+  margin-bottom: 0.6rem;
+}
+
+.confidence-scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.confidence-option {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 0.4rem 0.3rem;
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.15;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.confidence-option + .confidence-option {
+  border-left: 1px solid var(--line);
+}
+
+.confidence-option.is-on {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.confidence-option:focus-within {
+  outline: 2px solid var(--lamp);
+  outline-offset: -2px;
+}
+
+.city-guess-submit {
+  justify-self: start;
+  min-width: 12rem;
+}
+
+.guess-error {
+  margin-top: 1rem;
+  color: var(--danger);
+}
+
+@media (max-width: 520px) {
+  .pick-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pick-card {
+    padding: 0.75rem 2.25rem 0.8rem 0.8rem;
+  }
+  .pick-check {
+    right: 0.7rem;
+  }
+  .confidence-option {
+    font-size: 0.75rem;
+  }
+  .city-guess-submit {
+    justify-self: stretch;
+  }
+}

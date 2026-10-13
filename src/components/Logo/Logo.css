@@ -1,0 +1,18 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--paper);
+}
+
+.logo-mark {
+  flex: none;
+  fill: var(--lamp);
+}
+
+.logo-word {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variation-settings: 'wdth' 88;
+  letter-spacing: -0.02em;
+}

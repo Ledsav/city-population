@@ -1,39 +1,32 @@
-// src/components/ErrorBoundary.tsx
 import { Component, ErrorInfo, ReactNode } from 'react';
 
-interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
-}
-
-interface State {
-  hasError: boolean;
-}
+type Props = { children: ReactNode };
+type State = { hasError: boolean };
 
 class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
-    hasError: false
-  };
+  state: State = { hasError: false };
 
-  public static getDerivedStateFromError(): State {
+  static getDerivedStateFromError(): State {
     return { hasError: true };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Uncaught error:', error, info);
   }
 
-  public render() {
-    if (this.state.hasError) {
-      return this.props.fallback || (
-        <div className="error-message">
-          <h2>Something went wrong</h2>
-          <p>Please try refreshing the page or come back later.</p>
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <div className="screen-center">
+        <div className="error-card" role="alert">
+          <h1>Something broke</h1>
+          <p>Reload the page to start again. Your saved guesses are kept.</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>
+            Reload
+          </button>
         </div>
-      );
-    }
-
-    return this.props.children;
+      </div>
+    );
   }
 }
 

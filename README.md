@@ -30,28 +30,35 @@ PopGlobe helps reveal several interesting patterns in how we perceive cities:
 - **3D Visualization**: Three.js
 - **Data Storage**: Firebase Firestore
 - **State Management**: React Hooks
-- **Styling**: CSS Modules with custom animations
+- **Styling**: Plain CSS with design tokens (Bricolage Grotesque)
 - **Icons**: Lucide React
 
 ## Project Structure
 
 ```
 src/
-├── components/            # React components
-│   ├── CityGlobe/         # 3D globe visualization
-│   ├── CityMarkers/       # City marker implementation
-│   ├── CityRanking/       # City ranking list component
-│   ├── ErrorBoundary/     # Error handling component
-│   └── Form/              # Population perception form
-├── config/                # Configuration files
-├── services/              # Service layer
-│   ├── firebase.ts        # Firebase service
-│   ├── firebaseInitializer.ts # Database initialization
-│   ├── inputSanitizer.ts  # Input validation
-│   └── TextureLoader.ts   # 3D texture loading service
-├── types/                 # TypeScript type definitions
-└── docs/                  # Documentation
+├── components/
+│   ├── CityGlobe/        # Globe screen; GlobeScene.ts owns the three.js scene
+│   ├── CityRanking/      # Sortable city list
+│   ├── Guess/            # Pick cities, then guess one at a time
+│   ├── Intro/            # Landing screen
+│   └── Logo/             # Halftone-globe mark (generated SVG paths)
+├── config/               # Firebase config from env vars
+├── data/seedCities.ts    # Initial cities, also used offline
+├── lib/perception.ts     # Gap maths, number parsing and formatting
+└── services/firebase.ts  # Firestore Lite reads + transactional updates
+public/textures/          # Earth textures as WebP (2K, plus 4K day map for desktop)
 ```
+
+## Performance notes
+
+- The globe renders on demand: no frames are drawn while nothing moves.
+- three.js is code-split and only downloads when the globe opens (prefetched after load).
+- Textures are WebP (about 1 MB in total, down from 27 MB of 8K JPG/TIF). Low-power and
+  mobile devices skip clouds and the 4K day map.
+- City markers are two instanced meshes, so all cities are drawn in two draw calls.
+- Firestore Lite instead of full Firestore; each estimate is applied in its own transaction, in parallel.
+- Without Firebase env vars the app runs on the seed data in memory, so `npm start` works out of the box.
 
 ## Getting Started
 
